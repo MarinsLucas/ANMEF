@@ -57,6 +57,9 @@
         "typeinfo": "cpp",
         "__nullptr": "cpp",
         "__locale": "cpp",
-        "__string": "cpp"
+        "__string": "cpp",
+        "__split_buffer": "cpp",
+        "complex": "cpp",
+        "fstream": "cpp"
     }
 }

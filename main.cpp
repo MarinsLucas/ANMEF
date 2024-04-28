@@ -6,11 +6,14 @@
 #include<cmath>
 #include<iostream>
 #include<eigen3/Eigen/Dense>
+#include<fstream>
 
-#define f float
+#define f long double
 
 #define DIRICHLET 0
 #define NEUMANN 1
+
+#define EPSLON 0.0001
 
 
 using namespace std;
@@ -30,9 +33,32 @@ contourCondition create_contourCondition(f value, int type)
     return cc;
 }
 
-f G(f x)
+f constante_1(f x)
 {
-    return 1;
+    return 1; 
+}
+
+f pi2sinPiX(f x)
+{
+    return M_PI*M_PI*sin(M_PI*x);
+}
+
+f sinpix(f x)
+{
+    return sin(M_PI * x);
+}
+
+f picospix(f x)
+{
+    return M_PI*cos(M_PI*x);
+}
+
+f solexata2q(f x)
+{
+    f epslon = EPSLON; 
+    f c2 = (pow(M_E, -1.0/sqrt(epslon)) - 1.0)/(pow(M_E, 1.0/sqrt(epslon)) - pow(M_E, -1.0/sqrt(epslon)));
+    f c1 = - 1.0 - c2;
+    return c1*pow(M_E, -x/sqrt(epslon)) + c2*pow(M_E, x/sqrt(epslon)) + 1.0;
 }
 
 void printvector(vector<f> v)
@@ -57,68 +83,6 @@ void printmatrix(vector<vector<f>> m)
     }
 }
 
-// Função para realizar a decomposição LU
-void decomposeLU(std::vector<std::vector<f>>& A, std::vector<std::vector<f>>& L, std::vector<std::vector<f>>& U) {
-    int n = A.size();
-
-    // Inicializa L e U com zeros
-    L = std::vector<std::vector<f>>(n, std::vector<f>(n, 0));
-    U = std::vector<std::vector<f>>(n, std::vector<f>(n, 0));
-
-    // Preenche U com os elementos de A
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-            U[i][j] = A[i][j];
-        }
-    }
-
-    // Preenche a diagonal de L com 1s
-    for (int i = 0; i < n; i++) {
-        L[i][i] = 1;
-    }
-
-    // Realiza a decomposição LU
-    for (int k = 0; k < n - 1; k++) {
-        for (int i = k + 1; i < n; i++) {
-            L[i][k] = U[i][k] / U[k][k];
-            for (int j = k; j < n; j++) {
-                U[i][j] -= L[i][k] * U[k][j];
-            }
-        }
-    }
-}
-
-// Função para resolver um sistema linear Ax = b usando a decomposição LU
-std::vector<f> solveUsingLU(std::vector<std::vector<f>>& A, std::vector<f>& b) {
-    int n = A.size();
-    std::vector<std::vector<f>> L, U;
-
-    // Realiza a decomposição LU
-    decomposeLU(A, L, U);
-
-    // Resolve Ly = b
-    std::vector<f> y(n);
-    for (int i = 0; i < n; i++) {
-        f sum = 0;
-        for (int j = 0; j < i; j++) {
-            sum += L[i][j] * y[j];
-        }
-        y[i] = (b[i] - sum) / L[i][i];
-    }
-
-    // Resolve Ux = y
-    std::vector<f> x(n);
-    for (int i = n - 1; i >= 0; i--) {
-        f sum = 0;
-        for (int j = i + 1; j < n; j++) {
-            sum += U[i][j] * x[j];
-        }
-        x[i] = (y[i] - sum) / U[i][i];
-    }
-
-    return x;
-}
-
 
 vector<f> gauss_weights(int nint)
 {
@@ -129,7 +93,20 @@ vector<f> gauss_weights(int nint)
         w[0] = 1.0;
         w[1] = 1.0;
         break;
+
+    case 3:
+        w[0] = 5/9.0;
+        w[1] = 8/9.0;
+        w[2] = 5/9.0;
+        break;
     
+    case 4:
+        w[0] = (18.0 - sqrt(30.0))/36.0;
+        w[1] = (18.0 + sqrt(30.0))/36.0;
+        w[2] = (18.0 + sqrt(30.0))/36.0;
+        w[3] = (18.0 - sqrt(30.0))/36.0;
+        break;
+
     default:
         cout<<"gauss_weights error: não implementei esse número de pontos de integração ainda"<<endl;
         break;
@@ -143,12 +120,25 @@ f*** create_shg(int nen, int nint)
     shg[0] = new f*[nen];
     shg[1] =  new f*[nen];
 
-    vector<f> pt(nint, 0);
+    vector<f> pt;
     switch (nint)
     {
     case 2:
-        pt.push_back(-1/sqrt(3));
-        pt.push_back(1/sqrt(3));
+        pt.push_back(-1/sqrt(3.0));
+        pt.push_back(1/sqrt(3.0));
+        break;
+    
+    case 3:
+        pt.push_back(-sqrt(3.0/5.0));
+        pt.push_back(0.0);
+        pt.push_back(sqrt(3.0/5.0));
+        break;
+    
+    case 4:
+        pt.push_back(-sqrt((3.0/7.0) + (2.0/7.0)*sqrt(6.0/5.0)));
+        pt.push_back(-sqrt((3.0/7) - (2.0/7.0)*sqrt(6.0/5.0)));
+        pt.push_back(sqrt((3.0/7) - (2.0/7.0)*sqrt(6.0/5.0)));
+        pt.push_back(sqrt((3.0/7) + (2.0/7.0)*sqrt(6.0/5.0)));
         break;
     
     default:
@@ -156,6 +146,7 @@ f*** create_shg(int nen, int nint)
 
         break;
     }
+
     
     for(int j=0;j<nen; j++)
     {
@@ -176,7 +167,29 @@ f*** create_shg(int nen, int nint)
             shg[1][1][l] = 1.0/2.0;
             break;
         
+        case 3:
+            shg[0][0][l] = (1/2.0)*t*(t-1.0);
+            shg[0][1][l] = -((t-1.0)*(t+1.0));
+            shg[0][2][l] = (1/2.0)*t*(t+1);
+            shg[1][0][l] = (2.0*t - 1)/2.0;
+            shg[1][1][l] = -(2.0*t);
+            shg[1][2][l] = (2.0*t + 1)/2.0;
+            break;
+
+        case 4:
+            shg[0][0][l] = -(9.0/16.0)*(t + 1.0/3.0)*(t - 1.0/3.0)*(t-1.0);
+            shg[0][1][l] = (27.0/16.0)*(t + 1)*(t - 1.0/3.0)* (t-1);
+            shg[0][2][l] =  -(27.0/16.0)*(t + 1.0)*(t+ 1.0/3.0)*(t - 1.0);
+            shg[0][3][l] = (9.0/16.0)*(t + 1.0)*(t+1.0/3.0)*(t - 1.0/3.0);
+
+            shg[1][0][l] = -(9.0/16.0)*(3.0*pow(t,2) - 2.0*t - 1.0/9.0);
+            shg[1][1][l] = (27.0/16.0)*(3.0*pow(t, 2) - 2.0*t/3.0 - 1);
+            shg[1][2][l] =  (-27.0/16.0)*(3.0*pow(t, 2) + 2.0*t/3.0 -1);
+            shg[1][3][l] =  (9.0/16.0) * (3.0*pow(t, 2) + 2.0*t - 1.0/9.0);
+            break;
+
         default:
+            cout<<"Não definida função shg para esse número de pontos de integração"<<endl;
             break;
         }
     }
@@ -184,7 +197,42 @@ f*** create_shg(int nen, int nint)
     return shg; 
 }
 
-void fem(int nel, int nint, int nen, f h, f epslon, f gamma, contourCondition k1, contourCondition k2)
+f errul2(int nel, int nint, int nen, VectorXd u, f (*solexata)(f), f h, vector<f> x, short t)
+{
+    //Inicialize weight vector
+    vector<f> w = gauss_weights(nint);
+
+    //Inicializando shg
+    f*** shg = create_shg(nen, nint);
+
+    f erl2 = 0.0;
+
+    for(int n =0; n<nel; n++)
+    {
+        f eru = 0;
+        for(int l = 0; l < nint; l++)
+        {
+            f uh = 0;
+            f xx = 0;
+
+            for(int i=0; i<nen; i++)
+            {
+                xx = xx + shg[t][i][l] *(x[n*(nint -1) + i]);
+                    if(t==0)
+                {
+                    uh = uh + shg[t][i][l] * u(n*(nint -1) + i); //Tenho que selecionar o u da mesma forma do de baixo
+                }else{
+                    uh = uh + shg[t][i][l]*u(n*(nint -1) + i)*2.0/h;
+                }
+            }
+            eru = eru + ((solexata(xx) - uh)*(solexata(xx)-uh)*w[l]*h/2.0);
+        }
+        erl2 = erl2 + eru;
+    }
+    erl2 = sqrt(erl2);
+    return erl2;
+}
+void fem(int nel, int nint, int nen, f h, f epslon, f gamma, contourCondition k1, contourCondition k2, f (*G)(f), f (*solexata)(f))
 {
     //Inicializando a matrix e o vetor fonte
     // vector<vector<f>> K(1 + ((nint-1)*nel), vector<f>(1 + ((nint-1)*nel), 0));
@@ -206,18 +254,18 @@ void fem(int nel, int nint, int nen, f h, f epslon, f gamma, contourCondition k1
 
     for(int n = 0; n < nel; n++)
     {
-        int offset = n + (nen-2); 
+        int offset = n*(nen-1); 
         for(int l=0; l<nint; l++)
         {
             f xx = 0;
             for(int i=0; i<nen; i++)
             {
-                xx = xx + shg[0][i][l]*(x[n] + i*h/nen);
+                xx = xx + shg[0][i][l]*(x[n] + i*h/(nen-1));
             }
 
             for(int j = 0; j<nen; j++)
             {
-                F(j+offset) = F(j+offset) + G(xx) * shg[0][j][l]* w[l] * h/2;
+                F(j+offset) = F(j+offset) +G(xx) * shg[0][j][l]* w[l] * h/2;
 
                 for(int i = 0; i<nen; i++)
                 {
@@ -233,55 +281,113 @@ void fem(int nel, int nint, int nen, f h, f epslon, f gamma, contourCondition k1
     if(k1.type == DIRICHLET)
     {
         F(0) = k1.value; // Condição de contorno de Dirichilet aqui
-        F(1) -= K(1,0) * k1.value; 
-        K(0, 1) = 0;
-        K(1, 0) = 0;
+        for(int i = 1; i<nint; i++)
+        {   
+            F(i) -= K(i,0) * k1.value; 
+            K(0, i) = 0;
+            K(i, 0) = 0;
+        }
         K(0,0) = 1;
     }
     else if(k1.type == NEUMANN)
     {
-        F(0) += k1.value;
+        F(0) -= k1.value;
     }
     
     if(k2.type == DIRICHLET)
     {
         F((nint-1)*nel) = k2.value; 
-        F(((nint-1)*nel)-1) -= K(((nint-1)*nel), ((nint-1)*nel)-1)*k2.value;
+
+        //Os valores do lado eu não preciso fazer nada, mas com os valores abaixo é necessário fazer loucuras
+        for(int i = 1; i<nint; i++) // Tirei o zero, pra ele nn fazer loucuras demais 
+        {
+            F(((nint-1)*nel)-i) -= K(((nint-1)*nel), ((nint-1)*nel)-i)*k2.value;
+            K(((nint-1)*nel)-i, ((nint-1)*nel)) = 0;
+            K(((nint-1)*nel), ((nint-1)*nel)-i) = 0;
+        }
+        // F(((nint-1)*nel)-1) -= K(((nint-1)*nel), ((nint-1)*nel)-1)*k2.value;
         K(((nint-1)*nel),((nint-1)*nel)) = 1;
-        K(((nint-1)*nel)-1, ((nint-1)*nel)) = 0;
-        K(((nint-1)*nel), ((nint-1)*nel)-1) = 0;
+
+        
     }else if(k2.type == NEUMANN)
     {
-        F((nint -1)*nel) += k2.value;
+        F((nint -1)*nel) -= k2.value;
+    }
+    VectorXd u = K.partialPivLu().solve(F);
+
+   
+    ofstream file("output.txt");
+    if(!file)
+    {
+        cerr<<"Erro ao abrir arquivo de saída"<<endl;
+        return;
     }
 
-    VectorXd u = K.partialPivLu().solve(F);
-    cout<<"Solução"<<endl<<u<<endl;
+    //Escrevendo X
+    vector<f> xs;
+    file<<u.size()<<endl;
+    for(int i =0; i<u.size();i++)
+    {
+        xs.push_back(i*h/(nen-1));
+        file<<i*h/(nen-1);
+        if(i!=u.size()-1)
+            file<<",";
+    }
+    file<<endl;
+
+    //Escrevendo solução exata no arquivo:
+    for(int i = 0; i<u.size(); i++)
+    {
+        file<<solexata(i*h/(nen-1));
+        if(i!=u.size()-1)
+            file<<",";
+    }
+    file<<endl;
+
+    //Escrevendo solução no arquivo:
+    for(int i = 0; i<u.size(); i++)
+    {
+        file<<u(i);
+        if(i!=u.size()-1)
+            file<<",";
+    }
+    file<<endl;
+
+    file.close();
+    
+    cout<<"Erro solução"<<endl;
+    cout<<errul2(nel, nint, nen, u, solexata, h, xs, 0)<<endl;
 }
 
 void teste1(){
     cout<<"Teste duas condições Dirichlet do slide da Aula 1"<<endl;
     f a = 0, b = 1;
-    int nel = 4; 
+    int nel = 16; 
     f h = (b-a)/nel;
     
     int nint = 2;
     int nen = nint;
-    
-    fem(nel, nint, nen, h, 1, 0, create_contourCondition(0, DIRICHLET), create_contourCondition(0.5, DIRICHLET));
+    fem(nel, nint, nen, h, 1, 0, create_contourCondition(0, DIRICHLET), create_contourCondition(0.5, DIRICHLET), constante_1, sin);
 }
 
 void questao1()
-{
+{   
     cout<<"Questão 1 da primeira lista de ANMEF"<<endl;
-    f a = 0, b = 1.5;
-    int nel = 16;
-    f h = (b-a)/nel;
+    
+    for(int i = 1; i<=5; i++)
+    {
+        f a = 0, b = 1.5;
+        int nel = pow(4, i);
 
-    int nint = 2;
-    int nen = nint;
+        cout<<endl<<nel<<" elementos"<<endl;
+        f h = (b-a)/nel;
 
-    fem(nel, nint, nen, h, 1, 0, create_contourCondition(M_PI, DIRICHLET), create_contourCondition(sin(M_PI*1.5), NEUMANN));
+        int nint = 4;
+        int nen = nint;
+
+        fem(nel, nint, nen, h, 1, 0, create_contourCondition(M_PI, NEUMANN), create_contourCondition(sin(M_PI*1.5), DIRICHLET), pi2sinPiX, sinpix);
+    }
+    
 
 }
 
@@ -289,18 +395,19 @@ void questao2()
 {
     cout<<"Questão 2 da primeira lista de ANMEF"<<endl;
     f a = 0, b = 1;
-    int nel = 4;
+    int nel = 40;
     f h = (b-a)/nel;
 
     int nint = 2;
     int nen = nint;
-    f epslon = 0.001;
-    fem(nel, nint, nen, h, epslon, 1, create_contourCondition(0, DIRICHLET), create_contourCondition(0, DIRICHLET));
+    f epslon = EPSLON;
+    fem(nel, nint, nen, h, epslon, 1, create_contourCondition(0, DIRICHLET), create_contourCondition(0, DIRICHLET), constante_1, solexata2q);
 }
 
 int main(){
-    teste1();
-    questao2();
-
+    //teste1();
+    //questao1();
+    questao2();     
+    
     return 0;
 } 
