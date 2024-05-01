@@ -232,7 +232,7 @@ f errul2(int nel, int nint, int nen, VectorXd u, f (*solexata)(f), f h, vector<f
     erl2 = sqrt(erl2);
     return erl2;
 }
-void fem(int nel, int nint, int nen, f h, f epslon, f gamma, contourCondition k1, contourCondition k2, f (*G)(f), f (*solexata)(f))
+void galerkin_continum(int nel, int nint, int nen, f h, f epslon, f gamma, contourCondition k1, contourCondition k2, f (*G)(f), f (*solexata)(f))
 {
     //Inicializando a matrix e o vetor fonte
     // vector<vector<f>> K(1 + ((nint-1)*nel), vector<f>(1 + ((nint-1)*nel), 0));
@@ -359,6 +359,142 @@ void fem(int nel, int nint, int nen, f h, f epslon, f gamma, contourCondition k1
     cout<<errul2(nel, nint, nen, u, solexata, h, xs, 0)<<endl;
 }
 
+void galerking_LS(int nel, int nint, int nen, f h, f epslon, f gamma, contourCondition k1, contourCondition k2, f (*G)(f), f (*solexata)(f), f del2, f del1)
+{
+    //Inicialize weight vector
+    vector<f> w = gauss_weights(nint);
+    //Inicializando shg
+    f*** shg = create_shg(nen, nint);
+    vector<f> x(nel+1, 0); 
+    for(int i = 0; i <nel+1;i++)
+    {
+        x[i] = i*h;
+    }
+
+    //!Não sei se esses tamanhos estão certos
+    VectorXd Ge = VectorXd::Zero(1+(nint-1)*nel);
+    VectorXd Fe = VectorXd::Zero((1+(nint-1)*nel)*2.0);
+    MatrixXd Ae = MatrixXd::Zero((1+(nint-1)*nel)*2, (1+(nint-1)*nel)*2);
+    MatrixXd Be = MatrixXd::Zero(1+(nint-1)*nel, 1+(nint-1)*nel);
+    MatrixXd Ce = MatrixXd::Zero(1+(nint-1)*nel, 1+(nint-1)*nel);
+
+    for(int n = 0; n < nel; n++)
+    {
+        int offset = n*(nen-1); 
+        for(int l=0; l<nint; l++)
+        {
+            f xx = 0;
+            for(int i=0; i<nen; i++)
+            {
+                xx = xx + shg[0][i][l]*(x[n] + i*h/(nen-1));
+            }
+
+            for(int j = 0; j<nen; j++)
+            {
+                //G
+                Fe(j+offset) += del2 * G(xx)*shg[1][j][l]*(2.0/h)*w[l]*(h/2.0);
+                //F
+                Fe(j+offset + 1+(nint-1)*nel) += G(xx) * shg[0][j][l]*w[l]*(h/2.0); 
+
+                for(int i = 0; i<nen; i++)
+                {
+                    //A(linha, coluna)
+                    //A
+                    Ae(i+offset, j+offset)+= ((1+del1) * shg[0][i][l] * shg[0][j][l] + del2*shg[1][i][l]*(2.0/h)*shg[1][j][l]*(2.0/h)) * w[l] * h/2.0; 
+                    //B
+                    Ae(i+offset, j+offset+(1+(nint-1)*nel))+= (-shg[0][i][l]*shg[1][j][l] *(2.0/h) + del1*shg[1][i][l]*(2.0/h)*shg[0][j][l])*w[l]*(h/2.0);
+                    //Bt                    
+                    Ae(j+offset+(1+(nint-1)*nel), i+offset)+= (-shg[0][i][l]*shg[1][j][l] *(2.0/h) + del1*shg[1][i][l]*(2.0/h)*shg[0][j][l])*w[l]*(h/2.0);
+                    //C
+                    Ae(i+offset + (1+(nint-1)*nel), j+offset + (1+(nint-1)*nel))+= del1*shg[1][i][l]*2.0/h*shg[1][j][l]*2.0/h*w[l]*h/2.0;
+                }
+            }
+        }
+    }
+    
+    //Condições de contorno:
+    //Dirichilet:
+    if(k1.type == DIRICHLET)
+    {
+        F(0) = k1.value; // Condição de contorno de Dirichilet aqui
+        for(int i = 1; i<nint; i++)
+        {   
+            F(i) -= K(i,0) * k1.value; 
+            K(0, i) = 0;
+            K(i, 0) = 0;
+        }
+        K(0,0) = 1;
+    }
+    else if(k1.type == NEUMANN)
+    {
+        F(0) -= k1.value;
+    }
+    
+    if(k2.type == DIRICHLET)
+    {
+        F((nint-1)*nel) = k2.value; 
+
+        //Os valores do lado eu não preciso fazer nada, mas com os valores abaixo é necessário fazer loucuras
+        for(int i = 1; i<nint; i++) // Tirei o zero, pra ele nn fazer loucuras demais 
+        {
+            F(((nint-1)*nel)-i) -= K(((nint-1)*nel), ((nint-1)*nel)-i)*k2.value;
+            K(((nint-1)*nel)-i, ((nint-1)*nel)) = 0;
+            K(((nint-1)*nel), ((nint-1)*nel)-i) = 0;
+        }
+        // F(((nint-1)*nel)-1) -= K(((nint-1)*nel), ((nint-1)*nel)-1)*k2.value;
+        K(((nint-1)*nel),((nint-1)*nel)) = 1;
+
+        
+    }else if(k2.type == NEUMANN)
+    {
+        F((nint -1)*nel) -= k2.value;
+    }
+    VectorXd u = K.partialPivLu().solve(F);
+
+   
+    ofstream file("output.txt");
+    if(!file)
+    {
+        cerr<<"Erro ao abrir arquivo de saída"<<endl;
+        return;
+    }
+
+    //Escrevendo X
+    vector<f> xs;
+    file<<u.size()<<endl;
+    for(int i =0; i<u.size();i++)
+    {
+        xs.push_back(i*h/(nen-1));
+        file<<i*h/(nen-1);
+        if(i!=u.size()-1)
+            file<<",";
+    }
+    file<<endl;
+
+    //Escrevendo solução exata no arquivo:
+    for(int i = 0; i<u.size(); i++)
+    {
+        file<<solexata(i*h/(nen-1));
+        if(i!=u.size()-1)
+            file<<",";
+    }
+    file<<endl;
+
+    //Escrevendo solução no arquivo:
+    for(int i = 0; i<u.size(); i++)
+    {
+        file<<u(i);
+        if(i!=u.size()-1)
+            file<<",";
+    }
+    file<<endl;
+
+    file.close();
+    
+    cout<<"Erro solução"<<endl;
+    cout<<errul2(nel, nint, nen, u, solexata, h, xs, 0)<<endl;
+}
+
 void teste1(){
     cout<<"Teste duas condições Dirichlet do slide da Aula 1"<<endl;
     f a = 0, b = 1;
@@ -367,7 +503,7 @@ void teste1(){
     
     int nint = 2;
     int nen = nint;
-    fem(nel, nint, nen, h, 1, 0, create_contourCondition(0, DIRICHLET), create_contourCondition(0.5, DIRICHLET), constante_1, sin);
+    galerkin_continum(nel, nint, nen, h, 1, 0, create_contourCondition(0, DIRICHLET), create_contourCondition(0.5, DIRICHLET), constante_1, sin);
 }
 
 void questao1()
@@ -385,7 +521,7 @@ void questao1()
         int nint = 4;
         int nen = nint;
 
-        fem(nel, nint, nen, h, 1, 0, create_contourCondition(M_PI, NEUMANN), create_contourCondition(sin(M_PI*1.5), DIRICHLET), pi2sinPiX, sinpix);
+        galerkin_continum(nel, nint, nen, h, 1, 0, create_contourCondition(M_PI, NEUMANN), create_contourCondition(sin(M_PI*1.5), DIRICHLET), pi2sinPiX, sinpix);
     }
     
 
@@ -401,13 +537,30 @@ void questao2()
     int nint = 2;
     int nen = nint;
     f epslon = EPSLON;
-    fem(nel, nint, nen, h, epslon, 1, create_contourCondition(0, DIRICHLET), create_contourCondition(0, DIRICHLET), constante_1, solexata2q);
+    galerkin_continum(nel, nint, nen, h, epslon, 1, create_contourCondition(0, DIRICHLET), create_contourCondition(0, DIRICHLET), constante_1, solexata2q);
+}
+
+void lista_questao1()
+{
+    cout<<"Questão 2 da primeira lista de ANMEF"<<endl;
+    f a = 0, b = 1;
+    int nel = 40;
+    f h = (b-a)/nel;
+
+    int nint = 2;
+    int nen = nint;
+    f epslon = EPSLON;
+    galerking_LS(nel, nint, nen, h, epslon, 1, create_contourCondition(0, DIRICHLET), create_contourCondition(0, DIRICHLET), constante_1, solexata2q ,-1.0/2.0, -1.0/2.0);
 }
 
 int main(){
+    //Lista 1:
     //teste1();
     //questao1();
-    questao2();     
+    //questao2();     
     
+    //Lista 2:
+    lista_questao1(); 
+
     return 0;
 } 
