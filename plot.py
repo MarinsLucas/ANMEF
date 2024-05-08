@@ -7,15 +7,18 @@ def ler_arquivo(nome_arquivo):
             # Lendo o tamanho do primeiro vetor
             tamanho_vetor1 = int(arquivo.readline().strip())
 
-            # Lendo o primeiro vetor
+            # Lendo o primeiro vetor (xs)
             vetor1 = list(map(float, arquivo.readline().strip().split(',')))
 
-            # Lendo o segundo vetor
+            # Lendo o segundo veto (solução exata)
             vetor2 = list(map(float, arquivo.readline().strip().split(',')))
 
+            #(p)
             vetor3 = list(map(float, arquivo.readline().strip().split(',')))
-
-            return tamanho_vetor1, vetor1, vetor2, vetor3
+            
+            #(U)
+            vetor4 = list(map(float, arquivo.readline().strip().split(',')))
+            return tamanho_vetor1, vetor1, vetor2, vetor3, vetor4
 
     except FileNotFoundError:
         print("Arquivo não encontrado:", nome_arquivo)
@@ -26,13 +29,13 @@ def ler_arquivo(nome_arquivo):
 
 import subprocess
 
-subprocess.run("./out.exe")
+#subprocess.run("./out.exe")
 
 # Nome do arquivo a ser lido
 nome_do_arquivo = "output.txt"
 
 # Chamando a função para ler o arquivo
-tamanho_vetor1, vetor1, vetor2, vetor3 = ler_arquivo(nome_do_arquivo)
+tamanho_vetor1, vetor1, vetor2, vetor3, vetor4 = ler_arquivo(nome_do_arquivo)
 
 # Verificando se a leitura foi bem sucedida
 if tamanho_vetor1 is not None:
@@ -41,7 +44,9 @@ if tamanho_vetor1 is not None:
     print("Vetor 2:", vetor2)
 
 plt.plot(vetor1, vetor2, label="Exata")
-plt.plot(vetor1, vetor3, label="Aproximada")
+plt.plot(vetor1, vetor3, label="u")
+plt.plot(vetor1, vetor4, label="p")
+plt.grid()
 plt.legend()
 plt.show()
 

@@ -53,6 +53,10 @@ f picospix(f x)
     return M_PI*cos(M_PI*x);
 }
 
+f mpicospix(f x)
+{
+    return - M_PI*cos(M_PI*x);
+}
 f solexata2q(f x)
 {
     f epslon = EPSLON; 
@@ -70,17 +74,15 @@ void printvector(vector<f> v)
     cout<<endl;
 }
 
-void printmatrix(vector<vector<f>> m)
+void printmatrix(MatrixXd m)
 {
-    for(int i = 0; i<m.size(); i++)
-    {  
-        cout<<"[";
-        for (int j = 0; j<m[0].size(); j++)
-        {
-            cout<<m[i][j]<<",";
-        }
-        cout<<"]"<<endl;
+    ofstream file("matrix.txt");
+    if(!file)
+    {
+        cerr<<"Erro ao abrir arquivo de saída"<<endl;
+        return;
     }
+    file<<m<<endl;
 }
 
 
@@ -372,11 +374,8 @@ void galerking_LS(int nel, int nint, int nen, f h, f epslon, f gamma, contourCon
     }
 
     //!Não sei se esses tamanhos estão certos
-    VectorXd Ge = VectorXd::Zero(1+(nint-1)*nel);
     VectorXd Fe = VectorXd::Zero((1+(nint-1)*nel)*2.0);
     MatrixXd Ae = MatrixXd::Zero((1+(nint-1)*nel)*2, (1+(nint-1)*nel)*2);
-    MatrixXd Be = MatrixXd::Zero(1+(nint-1)*nel, 1+(nint-1)*nel);
-    MatrixXd Ce = MatrixXd::Zero(1+(nint-1)*nel, 1+(nint-1)*nel);
 
     for(int n = 0; n < nel; n++)
     {
@@ -392,7 +391,7 @@ void galerking_LS(int nel, int nint, int nen, f h, f epslon, f gamma, contourCon
             for(int j = 0; j<nen; j++)
             {
                 //G
-                Fe(j+offset) += del2 * G(xx)*shg[1][j][l]*(2.0/h)*w[l]*(h/2.0);
+                Fe(j+offset) += del2 * G(xx)*shg[1][j][l]*w[l]; //Dessa forma, acreditol que já esteja a condição de dirichlet 0
                 //F
                 Fe(j+offset + 1+(nint-1)*nel) += G(xx) * shg[0][j][l]*w[l]*(h/2.0); 
 
@@ -400,56 +399,20 @@ void galerking_LS(int nel, int nint, int nen, f h, f epslon, f gamma, contourCon
                 {
                     //A(linha, coluna)
                     //A
-                    Ae(i+offset, j+offset)+= ((1+del1) * shg[0][i][l] * shg[0][j][l] + del2*shg[1][i][l]*(2.0/h)*shg[1][j][l]*(2.0/h)) * w[l] * h/2.0; 
+                    Ae(i+offset, j+offset)+= (((1+del1) * shg[0][i][l] * shg[0][j][l]) + (del2*shg[1][i][l]*(2.0/h)*shg[1][j][l]*(2.0/h))) * w[l] * h/2.0; 
                     //B
-                    Ae(i+offset, j+offset+(1+(nint-1)*nel))+= (-shg[0][i][l]*shg[1][j][l] *(2.0/h) + del1*shg[1][i][l]*(2.0/h)*shg[0][j][l])*w[l]*(h/2.0);
+                    Ae(i+offset, j+offset+(1+(nint-1)*nel)) += (shg[0][j][l]*shg[1][i][l] *(2.0/h) + del1*shg[1][j][l]*(2.0/h)*shg[0][i][l])*w[l]*(h/2.0);
                     //Bt                    
-                    Ae(j+offset+(1+(nint-1)*nel), i+offset)+= (-shg[0][i][l]*shg[1][j][l] *(2.0/h) + del1*shg[1][i][l]*(2.0/h)*shg[0][j][l])*w[l]*(h/2.0);
+                    Ae(j+offset+(1+(nint-1)*nel), i+offset) += (shg[0][j][l]*shg[1][i][l] *(2.0/h) + del1*shg[1][j][l]*(2.0/h)*shg[0][i][l])*w[l]*(h/2.0);
                     //C
-                    Ae(i+offset + (1+(nint-1)*nel), j+offset + (1+(nint-1)*nel))+= del1*shg[1][i][l]*2.0/h*shg[1][j][l]*2.0/h*w[l]*h/2.0;
+                    Ae(i+offset + (1+(nint-1)*nel), j+offset + (1+(nint-1)*nel)) += (del1*shg[1][i][l]*(2.0/h)*shg[1][j][l]*2.0/h)*w[l]*h/2.0;
                 }
             }
         }
     }
     
-    //Condições de contorno:
-    //Dirichilet:
-    if(k1.type == DIRICHLET)
-    {
-        F(0) = k1.value; // Condição de contorno de Dirichilet aqui
-        for(int i = 1; i<nint; i++)
-        {   
-            F(i) -= K(i,0) * k1.value; 
-            K(0, i) = 0;
-            K(i, 0) = 0;
-        }
-        K(0,0) = 1;
-    }
-    else if(k1.type == NEUMANN)
-    {
-        F(0) -= k1.value;
-    }
-    
-    if(k2.type == DIRICHLET)
-    {
-        F((nint-1)*nel) = k2.value; 
-
-        //Os valores do lado eu não preciso fazer nada, mas com os valores abaixo é necessário fazer loucuras
-        for(int i = 1; i<nint; i++) // Tirei o zero, pra ele nn fazer loucuras demais 
-        {
-            F(((nint-1)*nel)-i) -= K(((nint-1)*nel), ((nint-1)*nel)-i)*k2.value;
-            K(((nint-1)*nel)-i, ((nint-1)*nel)) = 0;
-            K(((nint-1)*nel), ((nint-1)*nel)-i) = 0;
-        }
-        // F(((nint-1)*nel)-1) -= K(((nint-1)*nel), ((nint-1)*nel)-1)*k2.value;
-        K(((nint-1)*nel),((nint-1)*nel)) = 1;
-
-        
-    }else if(k2.type == NEUMANN)
-    {
-        F((nint -1)*nel) -= k2.value;
-    }
-    VectorXd u = K.partialPivLu().solve(F);
+    printmatrix(Ae);
+    VectorXd u = Ae.partialPivLu().solve(Fe);
 
    
     ofstream file("output.txt");
@@ -462,26 +425,35 @@ void galerking_LS(int nel, int nint, int nen, f h, f epslon, f gamma, contourCon
     //Escrevendo X
     vector<f> xs;
     file<<u.size()<<endl;
-    for(int i =0; i<u.size();i++)
+    for(int i =0; i<u.size()/2;i++)
     {
         xs.push_back(i*h/(nen-1));
         file<<i*h/(nen-1);
-        if(i!=u.size()-1)
+        if(i!=(u.size()/2)-1)
             file<<",";
     }
     file<<endl;
 
     //Escrevendo solução exata no arquivo:
-    for(int i = 0; i<u.size(); i++)
+    for(int i = 0; i<u.size()/2; i++)
     {
         file<<solexata(i*h/(nen-1));
-        if(i!=u.size()-1)
+        if(i!=(u.size()/2)-1)
             file<<",";
     }
     file<<endl;
 
-    //Escrevendo solução no arquivo:
-    for(int i = 0; i<u.size(); i++)
+    //Escrevendo solução de p no arquivo:
+    for(int i = 0; i<(u.size()/2); i++)
+    {
+        file<<u(i);
+        if(i!=(u.size()/2)-1)
+            file<<",";
+    }
+    file<<endl;
+
+    //Escrevendo a solução de u o arquivo
+    for(int i = int(u.size()/2); i<u.size(); i++)
     {
         file<<u(i);
         if(i!=u.size()-1)
@@ -549,8 +521,7 @@ void lista_questao1()
 
     int nint = 2;
     int nen = nint;
-    f epslon = EPSLON;
-    galerking_LS(nel, nint, nen, h, epslon, 1, create_contourCondition(0, DIRICHLET), create_contourCondition(0, DIRICHLET), constante_1, solexata2q ,-1.0/2.0, -1.0/2.0);
+    galerking_LS(nel, nint, nen, h, 0, 0, create_contourCondition(0, DIRICHLET), create_contourCondition(0, DIRICHLET), pi2sinPiX, mpicospix ,-1.0/2.0, -1.0/2.0);
 }
 
 int main(){
