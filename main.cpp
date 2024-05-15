@@ -391,21 +391,21 @@ void galerking_LS(int nel, int nint, int nen, f h, f epslon, f gamma, contourCon
             for(int j = 0; j<nen; j++)
             {
                 //G
-                Fe(j+offset) += del2 * G(xx)*shg[1][j][l]*w[l]; //Dessa forma, acreditol que já esteja a condição de dirichlet 0
+                Fe(j+offset) = 0.0; 
                 //F
-                Fe(j+offset + 1+(nint-1)*nel) += G(xx) * shg[0][j][l]*w[l]*(h/2.0); 
+                Fe(j+offset + 1+(nint-1)*nel) -= G(xx) * shg[0][j][l]*w[l]*(h/2.0); 
 
                 for(int i = 0; i<nen; i++)
                 {
                     //A(linha, coluna)
-                    //A
-                    Ae(i+offset, j+offset)+= (((1+del1) * shg[0][i][l] * shg[0][j][l]) + (del2*shg[1][i][l]*(2.0/h)*shg[1][j][l]*(2.0/h))) * w[l] * h/2.0; 
+                    //A 
+                    Ae(i+offset, j+offset) += (shg[0][j][l] * shg[0][i][l]  + (del1 * shg[0][j][l] * shg[0][i][l])) * w[l] *h/2.0; 
                     //B
-                    Ae(i+offset, j+offset+(1+(nint-1)*nel)) += (shg[0][j][l]*shg[1][i][l] *(2.0/h) + del1*shg[1][j][l]*(2.0/h)*shg[0][i][l])*w[l]*(h/2.0);
+                    Ae(i+offset, j+offset+(1+(nint-1)*nel)) += (-shg[0][j][l]*shg[1][i][l] *(2.0/h) + del1*shg[1][j][l]*(2.0/h)*shg[0][i][l])*w[l]*(h/2.0);
                     //Bt                    
-                    Ae(j+offset+(1+(nint-1)*nel), i+offset) += (shg[0][j][l]*shg[1][i][l] *(2.0/h) + del1*shg[1][j][l]*(2.0/h)*shg[0][i][l])*w[l]*(h/2.0);
+                    Ae(j+offset+(1+(nint-1)*nel), i+offset) += (-shg[0][j][l]*shg[1][i][l] *(2.0/h) + del1*shg[1][j][l]*(2.0/h)*shg[0][i][l])*w[l]*(h/2.0);
                     //C
-                    Ae(i+offset + (1+(nint-1)*nel), j+offset + (1+(nint-1)*nel)) += (del1*shg[1][i][l]*(2.0/h)*shg[1][j][l]*2.0/h)*w[l]*h/2.0;
+                    Ae(i+offset + (1+(nint-1)*nel), j+offset + (1+(nint-1)*nel)) += (del1*shg[1][i][l]*(2.0/h)*shg[1][j][l]*(2.0/h))*w[l]*h/2.0;
                 }
             }
         }
@@ -516,7 +516,7 @@ void lista_questao1()
 {
     cout<<"Questão 2 da primeira lista de ANMEF"<<endl;
     f a = 0, b = 1;
-    int nel = 40;
+    int nel = 64;
     f h = (b-a)/nel;
 
     int nint = 2;
@@ -534,4 +534,4 @@ int main(){
     lista_questao1(); 
 
     return 0;
-} 
+}
