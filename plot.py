@@ -43,7 +43,8 @@ if tamanho_vetor1 is not None:
     print("Vetor 1:", vetor1)
     print("Vetor 2:", vetor2)
 
-plt.plot(vetor1, vetor2, label="Exata")
+plt.plot(vetor1, vetor2, label="Exata u")
+plt.plot(vetor1, np.sin([x * np.pi for x in vetor1]), label = "Exata p")
 plt.plot(vetor1, vetor3, label="u")
 plt.plot(vetor1, vetor4, label="p")
 plt.grid()
@@ -52,9 +53,15 @@ plt.show()
 
 
 elementos = [4, 16, 64, 256, 1024]
-erros4 = [0.000436801, 1.7329e-06, 6.77568e-09, 5.85645e-10, 4.66978e-11  ]
-erros3 = [0.00667044, 0.00010631, 1.66317e-06, 2.5989e-08, 4.06081e-10]
-erros2 = [0.0963726, 0.00624492, 0.000391206, 2.44539e-05, 1.52838e-06]
+#Erru u:
+#erros5 = [0.0011364, 2.37805e-05, 3.95218e-07, 6.26002e-09, 8.38519e-11]
+#erros4 = [4.26415e-05, 1.6477e-07, 6.42919e-10, 4.93914e-12, 8.38519e-11]
+#erros3 = [0.0011364,2.37805e-05, 3.95218e-07, 6.26002e-09, 1.04265e-10]
+#erros2 = [0.0177512, 0.00113316, 7.09813e-05, 4.437e-06, 2.77316e-07]
+
+erros4 = [0.00119622, 1.71928e-05, 2.66771e-07, 4.16664e-09, 4.31678e-10]
+erros3 = [0.0215468, 0.00267676, 0.000192219, 1.23584e-05, 7.77729e-07]
+erros2 = [0.077882, 0.00388342, 0.000227991, 1.40171e-05, 8.72417e-07]
 
 print((np.log(erros4[1]) - np.log(erros4[0]))/(np.log(16)- np.log(4)))
 print((np.log(erros3[1]) - np.log(erros3[0]))/(np.log(16)- np.log(4)))

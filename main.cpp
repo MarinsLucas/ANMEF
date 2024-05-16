@@ -108,6 +108,14 @@ vector<f> gauss_weights(int nint)
         w[2] = (18.0 + sqrt(30.0))/36.0;
         w[3] = (18.0 - sqrt(30.0))/36.0;
         break;
+    
+    case 5:
+        w[0] = (322 - 13*sqrt(70))/900.0;
+        w[1] = (322 + 13*sqrt(70))/900.0;
+        w[2] = 128.0/225.0;
+        w[3] = (322 + 13*sqrt(70))/900.0;
+        w[4] = (322 - 13*sqrt(70))/900.0;
+        break;
 
     default:
         cout<<"gauss_weights error: não implementei esse número de pontos de integração ainda"<<endl;
@@ -142,7 +150,15 @@ f*** create_shg(int nen, int nint)
         pt.push_back(sqrt((3.0/7) - (2.0/7.0)*sqrt(6.0/5.0)));
         pt.push_back(sqrt((3.0/7) + (2.0/7.0)*sqrt(6.0/5.0)));
         break;
-    
+
+    case 5:
+        pt.push_back((-1.0/3.0)*sqrt(5.0 +  2*sqrt(10/7)));
+        pt.push_back((-1.0/3.0)*sqrt(5.0 -  2*sqrt(10/7)));
+        pt.push_back(0.0);
+        pt.push_back((1.0/3.0)*sqrt(5.0 -  2*sqrt(10/7)));
+        pt.push_back((1.0/3.0)*sqrt(5.0 +  2*sqrt(10/7)));
+        break;
+
     default:
         cout<<"shg error: não implementei esse número de pontos de integração ainda"<<endl;
 
@@ -188,6 +204,20 @@ f*** create_shg(int nen, int nint)
             shg[1][1][l] = (27.0/16.0)*(3.0*pow(t, 2) - 2.0*t/3.0 - 1);
             shg[1][2][l] =  (-27.0/16.0)*(3.0*pow(t, 2) + 2.0*t/3.0 -1);
             shg[1][3][l] =  (9.0/16.0) * (3.0*pow(t, 2) + 2.0*t - 1.0/9.0);
+            break;
+
+        case 5:
+            shg[0][0][l] = (2.0/3.0)*(t + 1.0/2.0)*t*(t-1.0/2.0)*(t-1);
+            shg[0][1][l] = -(8.0/3.0)*(t+1)*t*(t-1.0/2.0)*(t-1);
+            shg[0][2][l] =  4*(t+1)*(t+1.0/2.0)*(t-1.0/2.0)*(t-1.0);
+            shg[0][3][l] = -(8.0/3.0)*(t+1)*t*(t+1.0/2.0)*(t-1);
+            shg[0][4][l] = (2.0/3.0)*(t+1)*(t+1.0/2.0)*t*(t - 1.0/2.0);
+
+            shg[1][0][l] = (2.0/3.0)*(t + 1.0/2.0)*t*(t-1.0/2.0)*(t-1);
+            shg[1][1][l] = -(8.0/3.0)*(t+1)*t*(t-1.0/2.0)*(t-1);
+            shg[1][2][l] =  4*(t+1)*(t+1.0/2.0)*(t-1.0/2.0)*(t-1.0);
+            shg[1][3][l] = -(8.0/3.0)*(t+1)*t*(t+1.0/2.0)*(t-1);
+            shg[1][4][l] = (2.0/3.0)*(t+1)*(t+1.0/2.0)*t*(t - 1.0/2.0);
             break;
 
         default:
@@ -361,7 +391,7 @@ void galerkin_continum(int nel, int nint, int nen, f h, f epslon, f gamma, conto
     cout<<errul2(nel, nint, nen, u, solexata, h, xs, 0)<<endl;
 }
 
-void galerking_LS(int nel, int nint, int nen, f h, f epslon, f gamma, contourCondition k1, contourCondition k2, f (*G)(f), f (*solexata)(f), f del2, f del1)
+void galerking_LS(int nel, int nint, int nen, f h, f epslon, f gamma, contourCondition k1, contourCondition k2, f (*G)(f), f (*usolexata)(f), f (*psolexata)(f) , f del2, f del1)
 {
     //Inicialize weight vector
     vector<f> w = gauss_weights(nint);
@@ -437,7 +467,7 @@ void galerking_LS(int nel, int nint, int nen, f h, f epslon, f gamma, contourCon
     //Escrevendo solução exata no arquivo:
     for(int i = 0; i<u.size()/2; i++)
     {
-        file<<solexata(i*h/(nen-1));
+        file<<usolexata(i*h/(nen-1));
         if(i!=(u.size()/2)-1)
             file<<",";
     }
@@ -463,8 +493,11 @@ void galerking_LS(int nel, int nint, int nen, f h, f epslon, f gamma, contourCon
 
     file.close();
     
-    cout<<"Erro solução"<<endl;
-    cout<<errul2(nel, nint, nen, u, solexata, h, xs, 0)<<endl;
+    cout<<"Erro solução p:"<<endl;
+    cout<<errul2(nel, nint, nen, u.segment(0, int(u.size()/2)), usolexata, h, xs, 0)<<endl;
+
+    cout<<"Erro solução u:"<<endl;
+    cout<<errul2(nel, nint, nen, u.segment(int(u.size()/2),int(u.size()/2)), psolexata, h, xs, 0)<<endl;
 }
 
 void teste1(){
@@ -482,7 +515,7 @@ void questao1()
 {   
     cout<<"Questão 1 da primeira lista de ANMEF"<<endl;
     
-    for(int i = 1; i<=5; i++)
+    for(int i = 1; i<=3; i++)
     {
         f a = 0, b = 1.5;
         int nel = pow(4, i);
@@ -490,7 +523,7 @@ void questao1()
         cout<<endl<<nel<<" elementos"<<endl;
         f h = (b-a)/nel;
 
-        int nint = 4;
+        int nint = 5;
         int nen = nint;
 
         galerkin_continum(nel, nint, nen, h, 1, 0, create_contourCondition(M_PI, NEUMANN), create_contourCondition(sin(M_PI*1.5), DIRICHLET), pi2sinPiX, sinpix);
@@ -513,15 +546,19 @@ void questao2()
 }
 
 void lista_questao1()
-{
-    cout<<"Questão 2 da primeira lista de ANMEF"<<endl;
-    f a = 0, b = 1;
-    int nel = 64;
-    f h = (b-a)/nel;
+{  
+    for(int i = 1; i <= 3; i++)
+    {
+        cout<<"Questão 1 da segunda lista de ANMEF"<<endl;
+        f a = 0, b = 1;
+        int nel = pow(4, i);
+        f h = (b-a)/nel;
+        cout<<nel<<endl;
 
-    int nint = 2;
-    int nen = nint;
-    galerking_LS(nel, nint, nen, h, 0, 0, create_contourCondition(0, DIRICHLET), create_contourCondition(0, DIRICHLET), pi2sinPiX, mpicospix ,-1.0/2.0, -1.0/2.0);
+        int nint = 4;
+        int nen = nint;
+        galerking_LS(nel, nint, nen, h, 0, 0, create_contourCondition(0, DIRICHLET), create_contourCondition(0, DIRICHLET), pi2sinPiX, mpicospix , sinpix,-1.0/2.0, -1.0/2.0);
+    }
 }
 
 int main(){
