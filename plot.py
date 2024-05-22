@@ -52,24 +52,38 @@ plt.legend()
 plt.show()
 
 
-elementos = [4, 16, 64, 256, 1024]
-#Erru u:
-#erros5 = [0.0011364, 2.37805e-05, 3.95218e-07, 6.26002e-09, 8.38519e-11]
-#erros4 = [4.26415e-05, 1.6477e-07, 6.42919e-10, 4.93914e-12, 8.38519e-11]
-#erros3 = [0.0011364,2.37805e-05, 3.95218e-07, 6.26002e-09, 1.04265e-10]
-#erros2 = [0.0177512, 0.00113316, 7.09813e-05, 4.437e-06, 2.77316e-07]
+elementos = [8, 16, 32, 64]
 
-erros4 = [0.00119622, 1.71928e-05, 2.66771e-07, 4.16664e-09, 4.31678e-10]
-erros3 = [0.0215468, 0.00267676, 0.000192219, 1.23584e-05, 7.77729e-07]
-erros2 = [0.077882, 0.00388342, 0.000227991, 1.40171e-05, 8.72417e-07]
+#nint = 2
+erros2p = [0.00450433, 0.00113316, 0.000283793, 7.09813e-05]
+erros2u = [0.0167836, 0.00388342, 0.000931678, 0.000227991]
 
-print((np.log(erros4[1]) - np.log(erros4[0]))/(np.log(16)- np.log(4)))
-print((np.log(erros3[1]) - np.log(erros3[0]))/(np.log(16)- np.log(4)))
-print((np.log(erros2[1]) - np.log(erros2[0]))/(np.log(16)- np.log(4)))
+#nint = 3
+erros3p = [0.000172815, 2.37805e-05, 3.1012e-06, 3.95218e-07]
+erros3u = [0.00850185, 0.00267676, 0.00073731, 0.000192219]
+#nint = 4
+erros4p = [2.64426e-06, 1.6477e-07, 1.02891e-08, 6.42919e-10]
+erros4u = [0.000140355, 1.71928e-05, 2.13724e-06, 2.66771e-07]
 
+#nint = 5
+erros5p = [7.24192e-08, 2.42906e-09, 7.83637e-11, 1.46856e-11]
+erros5u = [8.06921e-06, 5.8378e-07, 3.88357e-08, 2.50884e-09]
 
-plt.plot(np.log(elementos), np.log(erros4), label="k=4")
-plt.plot(np.log(elementos), np.log(erros3), label="k=3")
-plt.plot(np.log(elementos), np.log(erros2), label ="k=2")
+print("p 2" + str((np.log(erros5p[1]) - np.log(erros5p[0]))/(np.log(elementos[1])- np.log(elementos[0]))))
+print("u 2" + str((np.log(erros5u[1]) - np.log(erros5u[0]))/(np.log(elementos[1])- np.log(elementos[0]))))
+
+plt.title("Erros da solução de P")
+plt.plot(np.log(elementos), np.log(erros2p),'-o', label="k=1")
+plt.plot(np.log(elementos), np.log(erros3p), '-o',label="k=2")
+plt.plot(np.log(elementos), np.log(erros4p), '-o',label="k=3")
+plt.plot(np.log(elementos), np.log(erros5p),'-o', label="k=4")
+plt.legend()
+plt.show()
+
+plt.title("Erros da solução de U")
+plt.plot(np.log(elementos), np.log(erros2u),'-o', label="k=1")
+plt.plot(np.log(elementos), np.log(erros3u), '-o',label="k=2")
+plt.plot(np.log(elementos), np.log(erros4u), '-o',label="k=3")
+plt.plot(np.log(elementos), np.log(erros5u),'-o', label="k=4")
 plt.legend()
 plt.show()

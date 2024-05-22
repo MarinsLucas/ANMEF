@@ -76,7 +76,7 @@ void printvector(vector<f> v)
 
 void printmatrix(MatrixXd m)
 {
-    ofstream file("matrix.txt");
+    ofstream file("matrix.csv");
     if(!file)
     {
         cerr<<"Erro ao abrir arquivo de saída"<<endl;
@@ -152,11 +152,11 @@ f*** create_shg(int nen, int nint)
         break;
 
     case 5:
-        pt.push_back((-1.0/3.0)*sqrt(5.0 +  2*sqrt(10/7)));
-        pt.push_back((-1.0/3.0)*sqrt(5.0 -  2*sqrt(10/7)));
+        pt.push_back((-1.0/3.0)*sqrt(5.0 +  2.0*sqrt(10.0/7.0)));
+        pt.push_back((-1.0/3.0)*sqrt(5.0 -  2.0*sqrt(10.0/7.0)));
         pt.push_back(0.0);
-        pt.push_back((1.0/3.0)*sqrt(5.0 -  2*sqrt(10/7)));
-        pt.push_back((1.0/3.0)*sqrt(5.0 +  2*sqrt(10/7)));
+        pt.push_back((1.0/3.0)*sqrt(5.0 -  2.0*sqrt(10.0/7.0)));
+        pt.push_back((1.0/3.0)*sqrt(5.0 +  2.0*sqrt(10.0/7.0)));
         break;
 
     default:
@@ -185,7 +185,7 @@ f*** create_shg(int nen, int nint)
             shg[1][1][l] = 1.0/2.0;
             break;
         
-        case 3:
+        case 3:               
             shg[0][0][l] = (1/2.0)*t*(t-1.0);
             shg[0][1][l] = -((t-1.0)*(t+1.0));
             shg[0][2][l] = (1/2.0)*t*(t+1);
@@ -207,17 +207,17 @@ f*** create_shg(int nen, int nint)
             break;
 
         case 5:
-            shg[0][0][l] = (2.0/3.0)*(t + 1.0/2.0)*t*(t-1.0/2.0)*(t-1);
-            shg[0][1][l] = -(8.0/3.0)*(t+1)*t*(t-1.0/2.0)*(t-1);
-            shg[0][2][l] =  4*(t+1)*(t+1.0/2.0)*(t-1.0/2.0)*(t-1.0);
-            shg[0][3][l] = -(8.0/3.0)*(t+1)*t*(t+1.0/2.0)*(t-1);
-            shg[0][4][l] = (2.0/3.0)*(t+1)*(t+1.0/2.0)*t*(t - 1.0/2.0);
+            shg[0][0][l] = (t + (1.0/2.0))*t*(t - (1.0/2.0))*(t - 1.0)*(2.0/3.0);
+            shg[0][1][l] = (t + 1.0)*t*(t - (1.0/2.0))*(t - 1.0)*(-8.0/3.0);
+            shg[0][2][l] =  (t + 1.0)*(t + (1.0/2.0))*(t - (1.0/2.0))*(t - 1.0)*4.0;
+            shg[0][3][l] = (t + 1.0)*(t + (1.0/2.0))*t*(t - 1.0)*(-8.0/3.0);
+            shg[0][4][l] = (t + 1.0)*(t + (1.0/2.0))*t*(t - (1.0/2.0))*(2.0/3.0);
 
-            shg[1][0][l] = (2.0/3.0)*(t + 1.0/2.0)*t*(t-1.0/2.0)*(t-1);
-            shg[1][1][l] = -(8.0/3.0)*(t+1)*t*(t-1.0/2.0)*(t-1);
-            shg[1][2][l] =  4*(t+1)*(t+1.0/2.0)*(t-1.0/2.0)*(t-1.0);
-            shg[1][3][l] = -(8.0/3.0)*(t+1)*t*(t+1.0/2.0)*(t-1);
-            shg[1][4][l] = (2.0/3.0)*(t+1)*(t+1.0/2.0)*t*(t - 1.0/2.0);
+            shg[1][0][l] = ((16.0*pow(t, 3.0)) - (12.0*pow(t, 2.0)) - (2.0*t) + 1.0)/6.0;
+            shg[1][1][l] = -4.0*((8.0*pow(t,3.0)) - (3.0*pow(t,2.0)) - (4.0*t) + 1.0)/3.0;
+            shg[1][2][l] =  (16.0*pow(t, 3)) - (10.0*t);
+            shg[1][3][l] = -4*((8.0*pow(t,3.0)) + (3.0*pow(t,2.0)) - (4.0*t) - 1.0)/3.0;
+            shg[1][4][l] = ((16.0*pow(t,3.0)) + (12.0*pow(t,2.0)) - (2*t) - 1.0)/6.0;
             break;
 
         default:
@@ -238,7 +238,7 @@ f errul2(int nel, int nint, int nen, VectorXd u, f (*solexata)(f), f h, vector<f
     f*** shg = create_shg(nen, nint);
 
     f erl2 = 0.0;
-
+    int index = 0;
     for(int n =0; n<nel; n++)
     {
         f eru = 0;
@@ -249,16 +249,17 @@ f errul2(int nel, int nint, int nen, VectorXd u, f (*solexata)(f), f h, vector<f
 
             for(int i=0; i<nen; i++)
             {
-                xx = xx + shg[t][i][l] *(x[n*(nint -1) + i]);
-                    if(t==0)
+                xx = xx + shg[t][i][l] *(x[index + i]);
+                if(t==0)
                 {
-                    uh = uh + shg[t][i][l] * u(n*(nint -1) + i); //Tenho que selecionar o u da mesma forma do de baixo
+                    uh = uh + shg[t][i][l] * u(index + i); //Tenho que selecionar o u da mesma forma do de baixo
                 }else{
-                    uh = uh + shg[t][i][l]*u(n*(nint -1) + i)*2.0/h;
+                    uh = uh + shg[t][i][l]*u(index + i)*2.0/h;
                 }
             }
             eru = eru + ((solexata(xx) - uh)*(solexata(xx)-uh)*w[l]*h/2.0);
         }
+        index +=nint-1; 
         erl2 = erl2 + eru;
     }
     erl2 = sqrt(erl2);
@@ -397,6 +398,8 @@ void galerking_LS(int nel, int nint, int nen, f h, f epslon, f gamma, contourCon
     vector<f> w = gauss_weights(nint);
     //Inicializando shg
     f*** shg = create_shg(nen, nint);
+    
+
     vector<f> x(nel+1, 0); 
     for(int i = 0; i <nel+1;i++)
     {
@@ -429,14 +432,15 @@ void galerking_LS(int nel, int nint, int nen, f h, f epslon, f gamma, contourCon
                 {
                     //A(linha, coluna)
                     //A 
-                    Ae(i+offset, j+offset) += (shg[0][j][l] * shg[0][i][l]  + (del1 * shg[0][j][l] * shg[0][i][l])) * w[l] *h/2.0; 
+                    Ae(i+offset, j+offset) += (1+del1)*shg[0][i][l]*shg[0][j][l]*w[l]*h/2.0;
                     //B
-                    Ae(i+offset, j+offset+(1+(nint-1)*nel)) += (-shg[0][j][l]*shg[1][i][l] *(2.0/h) + del1*shg[1][j][l]*(2.0/h)*shg[0][i][l])*w[l]*(h/2.0);
+                    Ae(i+offset, j+offset+(1+(nint-1)*nel)) += (-1)*shg[0][j][l]*shg[1][i][l]*2.0/h*w[l]*h/2.0 + del1*shg[1][j][l]*2.0/h *shg[0][i][l]*w[l]*h/2.0;
                     //Bt                    
-                    Ae(j+offset+(1+(nint-1)*nel), i+offset) += (-shg[0][j][l]*shg[1][i][l] *(2.0/h) + del1*shg[1][j][l]*(2.0/h)*shg[0][i][l])*w[l]*(h/2.0);
+                    Ae(j+offset+(1+(nint-1)*nel), i+offset) += (-1)*shg[0][j][l]*shg[1][i][l]*2.0/h*w[l]*h/2.0 + del1*shg[1][j][l]*2.0/h *shg[0][i][l]*w[l]*h/2.0;
                     //C
                     Ae(i+offset + (1+(nint-1)*nel), j+offset + (1+(nint-1)*nel)) += (del1*shg[1][i][l]*(2.0/h)*shg[1][j][l]*(2.0/h))*w[l]*h/2.0;
                 }
+        
             }
         }
     }
@@ -493,10 +497,10 @@ void galerking_LS(int nel, int nint, int nen, f h, f epslon, f gamma, contourCon
 
     file.close();
     
-    cout<<"Erro solução p:"<<endl;
-    cout<<errul2(nel, nint, nen, u.segment(0, int(u.size()/2)), usolexata, h, xs, 0)<<endl;
-
     cout<<"Erro solução u:"<<endl;
+    cout<<errul2(nel, nint, nen, u.segment(0, int(u.size()/2)), usolexata, h, xs, 0)<<endl;
+    
+    cout<<"Erro solução p:"<<endl;
     cout<<errul2(nel, nint, nen, u.segment(int(u.size()/2),int(u.size()/2)), psolexata, h, xs, 0)<<endl;
 }
 
@@ -506,7 +510,7 @@ void teste1(){
     int nel = 16; 
     f h = (b-a)/nel;
     
-    int nint = 2;
+    int nint = 4;
     int nen = nint;
     galerkin_continum(nel, nint, nen, h, 1, 0, create_contourCondition(0, DIRICHLET), create_contourCondition(0.5, DIRICHLET), constante_1, sin);
 }
@@ -547,17 +551,17 @@ void questao2()
 
 void lista_questao1()
 {  
-    for(int i = 1; i <= 3; i++)
+    for(int i = 3; i <= 6; i++)
     {
         cout<<"Questão 1 da segunda lista de ANMEF"<<endl;
         f a = 0, b = 1;
-        int nel = pow(4, i);
+        int nel = pow(2, i);
         f h = (b-a)/nel;
         cout<<nel<<endl;
 
-        int nint = 4;
+        int nint = 2;
         int nen = nint;
-        galerking_LS(nel, nint, nen, h, 0, 0, create_contourCondition(0, DIRICHLET), create_contourCondition(0, DIRICHLET), pi2sinPiX, mpicospix , sinpix,-1.0/2.0, -1.0/2.0);
+        galerking_LS(nel, nint, nen, h, 0, 0, create_contourCondition(0, DIRICHLET), create_contourCondition(0, DIRICHLET), pi2sinPiX, mpicospix , sinpix,0.0, -1.0/2.0);
     }
 }
 
