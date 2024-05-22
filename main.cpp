@@ -392,7 +392,7 @@ void galerkin_continum(int nel, int nint, int nen, f h, f epslon, f gamma, conto
     cout<<errul2(nel, nint, nen, u, solexata, h, xs, 0)<<endl;
 }
 
-void galerking_LS(int nel, int nint, int nen, f h, f epslon, f gamma, contourCondition k1, contourCondition k2, f (*G)(f), f (*usolexata)(f), f (*psolexata)(f) , f del2, f del1)
+void galerking_LS(int nel, int nint, int nen, f h, f epslon, f gamma, contourCondition k1, contourCondition k2, f (*G)(f), f (*usolexata)(f), f (*psolexata)(f) ,  f del1, f del2)
 {
     //Inicialize weight vector
     vector<f> w = gauss_weights(nint);
@@ -424,7 +424,7 @@ void galerking_LS(int nel, int nint, int nen, f h, f epslon, f gamma, contourCon
             for(int j = 0; j<nen; j++)
             {
                 //G
-                Fe(j+offset) = 0.0; 
+                Fe(j+offset) += del2*G(xx)*shg[1][j][l]*2.0/h * w[l] *h/2.0; 
                 //F
                 Fe(j+offset + 1+(nint-1)*nel) -= G(xx) * shg[0][j][l]*w[l]*(h/2.0); 
 
@@ -432,7 +432,8 @@ void galerking_LS(int nel, int nint, int nen, f h, f epslon, f gamma, contourCon
                 {
                     //A(linha, coluna)
                     //A 
-                    Ae(i+offset, j+offset) += (1+del1)*shg[0][i][l]*shg[0][j][l]*w[l]*h/2.0;
+                    Ae(i+offset, j+offset) += ((1+del1)*shg[0][i][l]*shg[0][j][l]*w[l]*h/2.0) + (del2*shg[1][i][l]*2.0/h *shg[1][j][l]*2.0/h *w[l] *h/2.0);
+                    
                     //B
                     Ae(i+offset, j+offset+(1+(nint-1)*nel)) += (-1)*shg[0][j][l]*shg[1][i][l]*2.0/h*w[l]*h/2.0 + del1*shg[1][j][l]*2.0/h *shg[0][i][l]*w[l]*h/2.0;
                     //Bt                    
@@ -551,7 +552,7 @@ void questao2()
 
 void lista_questao1()
 {  
-    for(int i = 3; i <= 6; i++)
+    for(int i = 5; i <= 5; i++)
     {
         cout<<"Questão 1 da segunda lista de ANMEF"<<endl;
         f a = 0, b = 1;
@@ -561,7 +562,7 @@ void lista_questao1()
 
         int nint = 2;
         int nen = nint;
-        galerking_LS(nel, nint, nen, h, 0, 0, create_contourCondition(0, DIRICHLET), create_contourCondition(0, DIRICHLET), pi2sinPiX, mpicospix , sinpix,0.0, -1.0/2.0);
+        galerking_LS(nel, nint, nen, h, 0, 0, create_contourCondition(0, DIRICHLET), create_contourCondition(0, DIRICHLET), pi2sinPiX, mpicospix , sinpix, -1.0/2.0, -1.0/2.0);
     }
 }
 
