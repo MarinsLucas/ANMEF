@@ -15,11 +15,9 @@ def ler_arquivo(nome_arquivo):
 
             #(p)
             vetor3 = list(map(float, arquivo.readline().strip().split(',')))
-            
-            #(U)
-            vetor4 = list(map(float, arquivo.readline().strip().split(',')))
-            return tamanho_vetor1, vetor1, vetor2, vetor3, vetor4
+            return tamanho_vetor1, vetor1, vetor2, vetor3
 
+           
     except FileNotFoundError:
         print("Arquivo não encontrado:", nome_arquivo)
         return None, None, None
@@ -35,7 +33,7 @@ import subprocess
 nome_do_arquivo = "output.txt"
 
 # Chamando a função para ler o arquivo
-tamanho_vetor1, vetor1, vetor2, vetor3, vetor4 = ler_arquivo(nome_do_arquivo)
+tamanho_vetor1, vetor1, vetor2, vetor3 = ler_arquivo(nome_do_arquivo)
 
 # Verificando se a leitura foi bem sucedida
 if tamanho_vetor1 is not None:
@@ -44,14 +42,13 @@ if tamanho_vetor1 is not None:
     print("Vetor 2:", vetor2)
 
 plt.title("Comparação entre solução exata e aproximação")
-plt.plot(np.linspace(0, 1, 1000), -np.pi*np.cos(np.pi*np.linspace(0, 1, 1000)), label="Exata u")
-plt.plot(np.linspace(0, 1, 1000), np.sin([x * np.pi for x in np.linspace(0, 1, 1000)]), label = "Exata p")
-plt.plot(vetor1, vetor3,'-o', label="u")
-plt.plot(vetor1, vetor4,'-o', label="p")
+plt.plot(vetor1, vetor3,'-o', label="aproximada")
+plt.plot(vetor1, vetor2,'-o', label="exata")
 plt.grid()
 plt.legend()
 plt.show()
 
+quit()
 
 #Questões a até e
 
@@ -80,6 +77,10 @@ plt.plot(np.log(elementos), np.log(erros2p),'-o', label="k=1")
 plt.plot(np.log(elementos), np.log(erros3p), '-o',label="k=2")
 plt.plot(np.log(elementos), np.log(erros4p), '-o',label="k=3")
 plt.plot(np.log(elementos), np.log(erros5p),'-o', label="k=4")
+plt.xlabel("log(nel)")
+plt.ylabel("log(erro)")
+plt.xlim([2, 4.3])
+plt.ylim([-30, 0])
 plt.legend()
 plt.show()
 
@@ -88,6 +89,10 @@ plt.plot(np.log(elementos), np.log(erros2u),'-o', label="k=1")
 plt.plot(np.log(elementos), np.log(erros3u), '-o',label="k=2")
 plt.plot(np.log(elementos), np.log(erros4u), '-o',label="k=3")
 plt.plot(np.log(elementos), np.log(erros5u),'-o', label="k=4")
+plt.xlabel("log(nel)")
+plt.ylabel("log(erro)")
+plt.xlim([2, 4.3])
+plt.ylim([-30, 0])
 plt.legend()
 plt.show()
 
@@ -116,6 +121,10 @@ plt.plot(np.log(elementos), np.log(erros2p),'-o', label="k=1")
 plt.plot(np.log(elementos), np.log(erros3p), '-o',label="k=2")
 plt.plot(np.log(elementos), np.log(erros4p), '-o',label="k=3")
 plt.plot(np.log(elementos), np.log(erros5p),'-o', label="k=4")
+plt.xlabel("log(nel)")
+plt.ylabel("log(erro)")
+plt.xlim([2, 4.3])
+plt.ylim([-30, 0])
 plt.legend()
 plt.show()
 
@@ -124,5 +133,9 @@ plt.plot(np.log(elementos), np.log(erros2u),'-o', label="k=1")
 plt.plot(np.log(elementos), np.log(erros3u), '-o',label="k=2")
 plt.plot(np.log(elementos), np.log(erros4u), '-o',label="k=3")
 plt.plot(np.log(elementos), np.log(erros5u),'-o', label="k=4")
+plt.xlabel("log(nel)")
+plt.ylabel("log(erro)")
+plt.xlim([2, 4.3])
+plt.ylim([-30, 0])
 plt.legend()
 plt.show()
