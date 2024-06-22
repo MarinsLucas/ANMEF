@@ -134,20 +134,20 @@ vector<f> gauss_weights(int nint)
     return w;
 }
 
+
 f*** create_shg(int nen, int nint)
 {
     f*** shg = new f**[2];
     shg[0] = new f*[nen];
     shg[1] =  new f*[nen];
-
     vector<f> pt;
     switch (nint)
     {
     case 2:
-        /* pt.push_back(-1/sqrt(3.0));
-        pt.push_back(1/sqrt(3.0)); */
-        pt.push_back(-1.0);
-        pt.push_back(1.0);
+        pt.push_back(-1/sqrt(3.0));
+        pt.push_back(1/sqrt(3.0));
+        /* pt.push_back(-1.0);
+        pt.push_back(1.0); */
         break;
     
     case 3:
@@ -239,6 +239,68 @@ f*** create_shg(int nen, int nint)
     }
 
     return shg; 
+}
+
+
+f shge(int deriv, int i, int t, int nint) 
+{
+    f** shg = new f*[2];
+    shg[0] = new f[nint];
+    shg[1] =  new f[nint];
+    
+    //Preenchimento do shg
+    
+    switch (nint)
+    {
+        case 2: 
+            shg[0][0] = (1.0 - t)/2.0;
+            shg[0][1] = (1.0 + t)/2.0;
+            shg[1][0] = -1.0/2.0;
+            shg[1][1] = 1.0/2.0;
+            break;
+        
+        case 3:               
+            shg[0][0] = (1/2.0)*t*(t-1.0);
+            shg[0][1] = -((t-1.0)*(t+1.0));
+            shg[0][2] = (1/2.0)*t*(t+1);
+            shg[1][0] = (2.0*t - 1)/2.0;
+            shg[1][1] = -(2.0*t);
+            shg[1][2] = (2.0*t + 1)/2.0;
+            break;
+
+        case 4:
+            shg[0][0]= -(9.0/16.0)*(t + 1.0/3.0)*(t - 1.0/3.0)*(t-1.0);
+            shg[0][1] = (27.0/16.0)*(t + 1)*(t - 1.0/3.0)* (t-1);
+            shg[0][2] =  -(27.0/16.0)*(t + 1.0)*(t+ 1.0/3.0)*(t - 1.0);
+            shg[0][3] = (9.0/16.0)*(t + 1.0)*(t+1.0/3.0)*(t - 1.0/3.0);
+
+            shg[1][0] = -(9.0/16.0)*(3.0*pow(t,2) - 2.0*t - 1.0/9.0);
+            shg[1][1] = (27.0/16.0)*(3.0*pow(t, 2) - 2.0*t/3.0 - 1);
+            shg[1][2] =  (-27.0/16.0)*(3.0*pow(t, 2) + 2.0*t/3.0 -1);
+            shg[1][3] =  (9.0/16.0) * (3.0*pow(t, 2) + 2.0*t - 1.0/9.0);
+            break;
+
+        case 5:
+            shg[0][0] = (t + (1.0/2.0))*t*(t - (1.0/2.0))*(t - 1.0)*(2.0/3.0);
+            shg[0][1] = (t + 1.0)*t*(t - (1.0/2.0))*(t - 1.0)*(-8.0/3.0);
+            shg[0][2] =  (t + 1.0)*(t + (1.0/2.0))*(t - (1.0/2.0))*(t - 1.0)*4.0;
+            shg[0][3] = (t + 1.0)*(t + (1.0/2.0))*t*(t - 1.0)*(-8.0/3.0);
+            shg[0][4] = (t + 1.0)*(t + (1.0/2.0))*t*(t - (1.0/2.0))*(2.0/3.0);
+
+            shg[1][0] = ((16.0*pow(t, 3.0)) - (12.0*pow(t, 2.0)) - (2.0*t) + 1.0)/6.0;
+            shg[1][1] = -4.0*((8.0*pow(t,3.0)) - (3.0*pow(t,2.0)) - (4.0*t) + 1.0)/3.0;
+            shg[1][2] =  (16.0*pow(t, 3)) - (10.0*t);
+            shg[1][3] = -4*((8.0*pow(t,3.0)) + (3.0*pow(t,2.0)) - (4.0*t) - 1.0)/3.0;
+            shg[1][4] = ((16.0*pow(t,3.0)) + (12.0*pow(t,2.0)) - (2*t) - 1.0)/6.0;
+            break;
+
+        default:
+            cout<<"Não definida função shg para esse número de pontos de integração"<<endl;
+            break;
+    }
+    
+
+    return shg[deriv][i]; 
 }
 
 f errul2(int nel, int nint, int nen, VectorXd u, f (*solexata)(f), f h, vector<f> x, short t)
@@ -400,7 +462,7 @@ void galerkin_continum(int nel, int nint, int nen, f h, f epslon, f gamma, conto
 
     file.close();
     
-    cout<<"Erro solução"<<endl;
+    //cout<<"Erro solução"<<endl;
     cout<<errul2(nel, nint, nen, u, solexata, h, xs, 0)<<endl;
 }
 
@@ -550,20 +612,44 @@ void Nitsche(int nel, int nint, int nen, f h, f epslon, f gamma, f alpha, f beta
 
             for(int j = 0; j<nen; j++)
             {
-                F(j+offset) = F(j+offset) +G(xx) * shg[0][j][l]* w[l] * h/2;
+                F(j+offset) = F(j+offset) + G(xx) * shg[0][j][l]* w[l] * h/2;
 
                 for(int i = 0; i<nen; i++)
                 {
-                    K(i+offset,j+offset) = K(i+offset,j+offset)+ epslon*(shg[1][i][l] * shg[1][j][l] * 2/h * w[l]) + gamma*(shg[0][i][l]*shg[0][j][l]*w[l]*h/2);
+                    K(i+offset,j+offset) = K(i+offset,j+offset)+ epslon*(shg[1][i][l] * shg[1][j][l] * 2/h * w[l]);
+                }
+            }
+        }
+        
+        if(n==0)
+        {
+            for(int j=0; j<nen; j++)
+            {
+                F(j) += alpha*(-shge(1, j, -1.0, nint)*(2.0/h)*k1.value) + beta*(-shge(0, j, -1.0, nint) *k1.value);
+
+                for(int i =0; i<nen; i++)
+                {
+                    K(i,j) += -(- shge(1, j, -1.0, nint)*(2.0/h)*shge(0, i, -1.0, nint));
+                    K(i,j)  += alpha*(- shge(1, i, -1.0, nint)*(2.0/h)*shge(0, j, -1.0, nint)); 
+                    K(i,j)  += beta*(- shge(0, j, -1.0, nint)*shge(0, i, -1.0, nint));
+                }
+            }
+        }
+        else if(n==nel-1)
+        {
+             for(int j=0; j<nen; j++)
+            {
+                F((nint-1)*(nel-1) + j) += alpha*(shge(1, j, 1.0, nint)*(2.0/h)*k2.value) + beta*(shge(0, j, 1.0, nint)*k2.value);
+
+                for(int i =0; i<nen; i++)
+                {
+                    K((nint-1)*(nel-1) + i,(nint-1)*(nel-1) + j) += -(shge(1, j, 1.0, nint)*(2.0/h)*shge(0, i, 1.0, nint));
+                    K((nint-1)*(nel-1) + i,(nint-1)*(nel-1) + j)  += alpha*(shge(1, i, 1.0, nint)*(2.0/h) *shge(0, j, 1.0,nint) ); 
+                    K((nint-1)*(nel-1) + i,(nint-1)*(nel-1) + j)  += beta*(shge(0, j, 1.0, nint)*shge(0, i, 1.0, nint));
                 }
             }
         }
     }
-    F(0) += alpha*(- shg[1][0][0]*k1.value*(2.0/h)) + beta*(- shg[0][0][0]*k1.value); //Aqui eu coloco já o valor de g(a)? Ou o valor tinha que ser de v(a)? 
-    K(0, 0) += shg[1][0][0]*(2.0/h)*shg[0][0][0] - (alpha*shg[1][0][0]*(2.0/h)*k1.value) - (beta*shg[0][0][0]*shg[0][0][0]);
-    F((nint-1)*nel) += alpha*(shg[1][(nen-1)][nint-1]*k2.value*(2.0/h) ) + beta*(shg[0][(nen-1)][nint-1]*k2.value);
-    K((nint-1)*nel, (nint-1)*nel) += (-shg[1][(nen-1)][nint-1]*(2.0/h)*shg[0][(nen-1)][nint-1]) + (alpha*shg[1][(nen-1)][nint-1]*(2.0/h)*k2.value) + (beta*shg[0][(nen-1)][nint-1]*shg[0][(nen-1)][nint-1]);
-
     VectorXd u = K.partialPivLu().solve(F);
 
    
@@ -612,11 +698,6 @@ void Nitsche(int nel, int nint, int nen, f h, f epslon, f gamma, f alpha, f beta
 
 void discontinuous_lagrange_exact(int nel, int nint, int nen, f h, f epslon, f alpha, f beta, contourCondition k1, contourCondition k2, f (*G)(f), f (*solexata)(f))
 {
-     //Inicializando a matrix e o vetor fonte
-    // vector<vector<f>> K(1 + ((nint-1)*nel), vector<f>(1 + ((nint-1)*nel), 0));
-    
-    // vector<f> F(1 + ((nint-1)*nel), 0);
-
     //Inicialize weight vector
     vector<f> w = gauss_weights(nint);
 
@@ -682,20 +763,14 @@ void discontinuous_lagrange_exact(int nel, int nint, int nen, f h, f epslon, f a
     cout<<endl;
 }
 
-void hibrid_fem(int nel, int nint, int nen, f h, f epslon, f alpha, f beta, contourCondition k1, contourCondition k2, f (*G)(f), f (*solexata)(f))
+void hibrid_fem(int nel, int nint, int nen, f h, f epslon, f alpha, f beta0, contourCondition k1, contourCondition k2, f (*G)(f), f (*solexata)(f))
 {
-     //Inicializando a matrix e o vetor fonte
-    // vector<vector<f>> K(1 + ((nint-1)*nel), vector<f>(1 + ((nint-1)*nel), 0));
-    
-    // vector<f> F(1 + ((nint-1)*nel), 0);
-
     //Inicialize weight vector
     vector<f> w = gauss_weights(nint);
 
     //Inicializando shg
     f*** shg = create_shg(nen, nint);
-
-    VectorXd u = VectorXd::Zero(nel*2);
+    f beta = pow(nint-1, 2)*beta0/h;
 
     vector<f> x(nel+1, 0); 
     for(int i = 0; i <nel+1;i++)
@@ -704,57 +779,218 @@ void hibrid_fem(int nel, int nint, int nen, f h, f epslon, f alpha, f beta, cont
     }
 
     int index = 0;
+    MatrixXd K_geral = MatrixXd::Zero(nel+1, nel+1);
+    VectorXd F_geral = VectorXd::Zero(nel+1);
+
+    //Calculo do multiplicador de LaGrange
     for(int n=0; n<nel; n++)
     {
         MatrixXd A = MatrixXd::Zero(nint, nint);
         MatrixXd B = MatrixXd::Zero(nint, 2);
         MatrixXd D = MatrixXd::Zero(2, nint);
-        VectorXd F = VectorXd::Zero(nint + 2); //Tem esse +1 por causa da equação de lambda
+        VectorXd F = VectorXd::Zero(nint);
 
-        for(int l=0; l<nint-1; l++)
+        for(int l=0; l<nint; l++)
+        {
+            f xx = 0;
+            for(int i =0; i<nen; i++)
+            {
+                xx += shg[0][i][l]*(x[n] + i*h/(nen-1));
+            } 
+            for(int j =0; j<nen;j++)
+            {
+                //aqui eu tenho que verificar dnv, se o primeiro item é a linha ou a coluna
+                F(j) += G(xx) *shg[0][j][l]*w[l]*(h/2.0);                    
+                
+                for(int i =0;i<nen;i++)
+                {
+                    //Talvez com k = 1 não dê problema nessa parte, mas quando for k.2, acho que essa segunda soma, só tem que ser nos "contornos" dos elementos;
+                    A(i,j) = A(i,j) + (shg[1][i][l] * shg[1][j][l] * (2.0/h) * w[l]);
+                }
+            }       
+        }    
+        for(int j = 0; j<nen; j++)
+        {
+            B(j,0) = alpha*(shge(1,j,-1.0, nint)*(2.0/h)) + beta*(shge(0,j,-1.0, nint));
+            B(j,1) = -alpha*(shge(1,j,1.0,nint) * (2.0/h)) - beta*(shge(0,j,1.0, nint));
+            
+            D(0,j) = -(shge(1,j,-1.0, nint)*(2.0/h)) + beta*(shge(0,j,-1.0, nint));
+            D(1,j) = (shge(1,j,1.0, nint)*(2.0/h)) - beta*(shge(0,j,1.0, nint));
+
+            for(int i = 0; i<nen; i++)
+            {
+                A(i,j) += shge(1,j,-1.0, nint) * (2.0/h) *shge(0,i,-1.0, nint);
+                A(i,j) += alpha*(-shge(1,i,-1.0, nint)) * (2.0/h) *shge(0,j,-1.0, nint);
+                A(i,j) += beta*(-shge(0,j,-1.0, nint) * shge(0,i,-1.0, nint));
+
+                A(i,j) += - shge(1,j,1.0,nint) * (2.0/h) *shge(0,i,1.0,nint);
+                A(i,j) += alpha*(shge(1,i,1.0,nint) * (2.0/h) *shge(0,j,1.0,nint));
+                A(i,j) += beta*(shge(0,j,1.0,nint) * shge(0,i,1.0,nint));
+            }
+        }
+
+        Matrix2d C;
+        C << -beta, 0.0, 0.0, beta;
+
+        Matrix2d K;
+        K = ((D*A.inverse()) *B) - C;
+
+        K_geral(n, n)+= K(0,0);
+        K_geral(n+1, n)+= K(1,0);
+        K_geral(n+1, n+1)+= K(1,1);
+        K_geral(n, n+1)+= K(0,1);
+
+        MatrixXd Fk = MatrixXd::Zero(2, 1);
+        Fk = (D*A.inverse())*F; 
+        F_geral(n) += Fk(0);
+        F_geral(n+1) += Fk(1);        
+    }
+
+    
+    //Condição de contorno
+    if(k1.type == DIRICHLET)
+    {
+        F_geral(0) = k1.value; // Condição de contorno de Dirichilet aqui
+        for(int i = 1; i<nint; i++)
+        {   
+            F_geral(i) -= K_geral(i,0) * k1.value; 
+            K_geral(0, i) = 0;
+            K_geral(i, 0) = 0;
+        }
+        K_geral(0,0) = 1;
+    }
+    if(k2.type == DIRICHLET)
+    {
+        F_geral(nel) = k2.value; 
+
+        //Os valores do lado eu não preciso fazer nada, mas com os valores abaixo é necessário fazer loucuras
+        for(int i = 1; i<nint; i++) // Tirei o zero, pra ele nn fazer loucuras demais 
+        {
+            F_geral((nel)-i) -= K_geral((nel), (nel)-i)*k2.value;
+            K_geral((nel)-i, (nel)) = 0;
+            K_geral((nel), (nel)-i) = 0;
+        }
+        K_geral((nel),(nel)) = 1;
+    }
+    VectorXd lmbda = K_geral.partialPivLu().solve(F_geral);
+
+    //!Buscando solução de U:
+    VectorXd u = VectorXd::Zero(nel*nint);
+    
+    index = 0;
+    f erul2 = 0; 
+    for(int n=0; n<nel; n++)
+    {
+        MatrixXd K = MatrixXd::Zero(nint, nint);
+        VectorXd F = VectorXd::Zero(nint);
+
+        int offset = n*(nen-1); 
+
+        for(int l=0; l<nint; l++)
         {
             f xx = 0;
             for(int i =0; i<nen; i++)
             {
                 xx += shg[0][i][l]*(x[n] + i*h/(nen-1));
                 //Troquei o j da expressão do F por i, para eliminar um loop
-                F(i) += G(xx) *shg[0][i][l]*w[l]*(h/2.0);
-
-                D(0, i) = -shg[1][i][l] + beta*shg[0][i][l];
-                D(1, i) = shg[1][i][l+1] - beta*shg[0][i][l+1];
-
             }
 
             for(int j =0; j<nen;j++)
             {
-                //aqui eu tenho que verificar dnv, se o primeiro item é a linha ou a coluna
-                B(j, 0) = alpha*shg[1][j][l] + beta*shg[0][j][l];
-                B(j, 1) = - alpha*shg[1][j][l+1] - beta*shg[0][j][l+1];
+                F(j) += G(xx) *shg[0][j][l]*w[l]*(h/2.0);
 
                 for(int i =0;i<nen;i++)
                 {
-                    A(i,j) = A(i,j)+ (shg[1][i][l] * shg[1][j][l] * (2.0/h) * w[l]);
-                    A(i,j) = -(shg[1][i][l+1]*(2.0/h)*shg[0][j][l+1]-shg[1][i][l]*(2.0/h)*shg[0][j][l]) + 
-                    alpha*(shg[1][j][l+1]*(2.0/h)*shg[0][i][l+1] - shg[1][j][l]*(2.0/h)*shg[0][i][l]) + beta*(shg[0][i][l+1]*shg[0][j][l+1] - shg[0][i][l]*shg[0][j][l]);
+                    K(i,j) += (shg[1][i][l] * shg[1][j][l] * (2.0/h) * w[l]);
                 }
             }
         }
         for(int j=0; j<nen; j++)
         {
-            F(j) += alpha*(shg[1][j][1]*(2.0/h)*solexata(x[n+1]) - shg[1][j][0]*(2.0/h)*solexata(x[n])) + beta*(shg[0][j][1]*solexata(x[n+1]) - shg[0][j][0]*solexata(x[n]));
+            F(j) += alpha*(-shge(1, j, -1.0, nint)*(2.0/h)*lmbda(n)) + beta*(-shge(0, j, -1.0, nint) *lmbda(n));
+            F(j) += alpha*(shge(1, j, 1.0, nint)*(2.0/h)*lmbda(n+1)) + beta*(shge(0, j, 1.0, nint)*lmbda(n+1));
+
+            for(int i =0; i<nen; i++)
+            {
+                K(i,j) += -(shge(1, j, 1.0, nint)*(2.0/h)*shge(0, i, 1.0, nint) - shge(1, j, -1.0, nint)*(2.0/h)*shge(0, i, -1.0, nint));
+                K(i,j)  += alpha*(shge(1, i, 1.0, nint)*(2.0/h) *shge(0, j, 1.0,nint) - shge(1, i, -1.0, nint)*(2.0/h)*shge(0, j, -1.0, nint)); 
+                K(i,j)  += beta*(shge(0, j, 1.0, nint)*shge(0, i, 1.0, nint) - shge(0, j, -1.0, nint)*shge(0, i, -1.0, nint));
+            }
         }
-        Matrix2d C;
-        C << -beta, 0.0, 0.0, beta;
-        
-        
-        /* VectorXd ue = VectorXd::Zero(nint);
+
+        VectorXd ue = VectorXd::Zero(nint);
         ue = K.inverse() * F;
         for(int i = 0; i<nen; i++)
         {
             u(index) =  ue(i);
             index++;
-        } */
+        }
+
+        f errok = 0;
+
+        for(int l =0; l<nint;l++)
+        {
+            f uh = 0.0;
+            f xx = 0.0;
+
+            for(int i =0; i<nen;i++)
+            {
+                uh += shg[0][i][l]*ue(i);
+                xx += shg[0][i][l]*(x[n] + i*h/(nen-1));
+            }
+            errok += (pow(solexata(xx) - uh, 2.0) * w[l]*(h/2.0));
+        }
+        erul2 += errok;
     }
+    
+    cout<<sqrt(erul2)<<endl; 
+    ofstream file("output.txt");
+    if(!file)
+    {
+        cerr<<"Erro ao abrir arquivo de saída"<<endl;
+        return;
+    }
+
+    //Escrevendo X
+    vector<f> xs;
+    file<<u.size()<<endl;
+
+    int j = nen;
+    for(int i =0; i<u.size() - nel+1;i++)
+    {
+        if(j == 0)
+        {
+            j = nen;
+            i--;
+        }
+        xs.push_back(i*h/(nen-1));
+        file<<i*h/(nen-1);
+        if(i!=u.size() - nel)
+            file<<",";
+        j--;
+
+    }
+    file<<endl;
+
+    //Escrevendo solução exata no arquivo:
+    for(int i = 0; i<xs.size(); i++)
+    {
+        file<<solexata(xs[i]);
+        if(i!=xs.size()-1)
+            file<<",";
+    }
+    file<<endl;
+
+    //Escrevendo solução no arquivo:
+    for(int i = 0; i<u.size(); i++)
+    {
+        file<<u(i);
+        if(i!=u.size()-1)
+            file<<",";
+    }
+    file<<endl;
+
+    file.close();
 }
 
 void questao1()
@@ -811,14 +1047,14 @@ void lista3questaoA()
 {
     cout<<"Questão A da terceira lista de ANMEF"<<endl;
     f a = 0, b = 1;
-    int nel = 8;
+    int nel = 4;
     f h = (b-a)/nel;
 
     int nint = 2;
     int nen = nint;
-    f alpha = -1;
-    f beta = 1000;
-    Nitsche(nel, nint, nen, h, 1, 0, alpha, beta, create_contourCondition(1, DIRICHLET), create_contourCondition(-1, DIRICHLET), pi2cospix, cospix);
+    f alpha = 1;
+    f beta0 = 100;
+    Nitsche(nel, nint, nen, h, 1, 0, alpha, beta0, create_contourCondition(1, DIRICHLET), create_contourCondition(-1, DIRICHLET), pi2cospix, cospix);
 }
 
 void lista3questaoC()
@@ -830,24 +1066,48 @@ void lista3questaoC()
 
     int nint = 2;
     int nen = nint;
-    f alpha = 1;
-    f beta = 1;
+    f alpha = 0;
+    f beta = 0;
     discontinuous_lagrange_exact(nel, nint, nen, h, 1, alpha, beta, create_contourCondition(1, DIRICHLET), create_contourCondition(-1, DIRICHLET), pi2cospix, cospix);
 }
 
-void lista3questaoE(){
-    cout<<"Questão E da terceira lista de ANMEF"<<endl;
+void lista3questaoF(){
+    cout<<"Questão F da terceira lista de ANMEF"<<endl;
     f a = 0, b = 1;
-    int nel = 8;
-    f h = (b-a)/nel;
-
-    int nint = 3;
-    int nen = nint;
-    f alpha = 1;
-    f beta = 1;
-    hibrid_fem(nel, nint, nen, h, 1, alpha, beta, create_contourCondition(1, DIRICHLET), create_contourCondition(-1, DIRICHLET), pi2cospix, cospix);
+    for(int i =9; i<10; i++)
+    {   
+        int nel = pow(2, i);
+        f h = (b-a)/nel;
+        //cout<<"nel = "<<nel<<endl; 
+        int nint = 5;
+        int nen = nint;
+        f alpha = 1;
+        f beta = 10;
+        hibrid_fem(nel, nint, nen, h, 1, alpha, beta, create_contourCondition(0, DIRICHLET), create_contourCondition(0, DIRICHLET), pi2sinPiX, sinpix);
+    }
 }
 
+
+void lista3questaoFGC()
+{   
+    cout<<"Questão F da terceira lista de ANMEF, Galerkin Clássico"<<endl;
+    
+    for(int i = 9; i<10; i++)
+    {
+        f a = 0, b = 1;
+        int nel = pow(2, i);
+
+        //cout<<endl<<nel<<" elementos"<<endl;
+        f h = (b-a)/nel;
+
+        int nint = 5;
+        int nen = nint;
+
+        galerkin_continum(nel, nint, nen, h, 1, 0, create_contourCondition(0,DIRICHLET), create_contourCondition(0, DIRICHLET), pi2sinPiX, sinpix);
+    }
+    
+
+}
 
 int main(){
     //Lista 1:
@@ -861,7 +1121,8 @@ int main(){
     //Lista 3:
     //lista3questaoA(); 
     //lista3questaoC(); 
-    lista3questaoE();
+    lista3questaoF();
+    //lista3questaoFGC();
 
     return 0;
 }

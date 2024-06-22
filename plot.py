@@ -20,10 +20,10 @@ def ler_arquivo(nome_arquivo):
            
     except FileNotFoundError:
         print("Arquivo não encontrado:", nome_arquivo)
-        return None, None, None
+        return None, None, None, None
     except Exception as e:
         print("Ocorreu um erro ao ler o arquivo:", e)
-        return None, None, None
+        return None, None, None, None
 
 import subprocess
 
@@ -43,12 +43,12 @@ if tamanho_vetor1 is not None:
 
 plt.title("Comparação entre solução exata e aproximação")
 plt.plot(vetor1, vetor3,'-o', label="aproximada")
-plt.plot(vetor1, vetor2,'-o', label="exata")
+plt.plot(vetor1, vetor2,'-o', label="exata", linestyle='--')
+
 plt.grid()
 plt.legend()
 plt.show()
 
-quit()
 
 #Questões a até e
 
