@@ -7,13 +7,7 @@
 #include<iostream>
 #include<eigen3/Eigen/Dense>
 #include<fstream>
-
-#define f long double
-
-#define DIRICHLET 0
-#define NEUMANN 1
-
-#define EPSLON 0.0001
+#include"functions.h"
 
 
 using namespace std;
@@ -32,69 +26,6 @@ contourCondition create_contourCondition(f value, int type)
     cc.type = type;
     return cc;
 }
-
-f cospix(f x)
-{
-    return cos(M_PI*x);
-}
-
-f constante_1(f x)
-{
-    return 1; 
-}
-
-f pi2sinPiX(f x)
-{
-    return M_PI*M_PI*sin(M_PI*x);
-}
-
-f sinpix(f x)
-{
-    return sin(M_PI * x);
-}
-
-f picospix(f x)
-{
-    return M_PI*cos(M_PI*x);
-}
-
-f mpicospix(f x)
-{
-    return - M_PI*cos(M_PI*x);
-}
-
-f pi2cospix(f x)
-{
-    return M_PI*M_PI*cos(M_PI*x);
-}
-f solexata2q(f x)
-{
-    f epslon = EPSLON; 
-    f c2 = (pow(M_E, -1.0/sqrt(epslon)) - 1.0)/(pow(M_E, 1.0/sqrt(epslon)) - pow(M_E, -1.0/sqrt(epslon)));
-    f c1 = - 1.0 - c2;
-    return c1*pow(M_E, -x/sqrt(epslon)) + c2*pow(M_E, x/sqrt(epslon)) + 1.0;
-}
-
-void printvector(vector<f> v)
-{
-    for(int i = 0; i<v.size(); i++)
-    {
-        cout<<v[i]<<",";
-    }
-    cout<<endl;
-}
-
-void printmatrix(MatrixXd m)
-{
-    ofstream file("matrix.csv");
-    if(!file)
-    {
-        cerr<<"Erro ao abrir arquivo de saída"<<endl;
-        return;
-    }
-    file<<m<<endl;
-}
-
 
 vector<f> gauss_weights(int nint)
 {
@@ -466,7 +397,7 @@ void galerkin_continum(int nel, int nint, int nen, f h, f epslon, f gamma, conto
     cout<<errul2(nel, nint, nen, u, solexata, h, xs, 0)<<endl;
 }
 
-void galerking_LS(int nel, int nint, int nen, f h, f epslon, f gamma, contourCondition k1, contourCondition k2, f (*G)(f), f (*usolexata)(f), f (*psolexata)(f) ,  f del1, f del2)
+void mixed_fem(int nel, int nint, int nen, f h, f epslon, f gamma, contourCondition k1, contourCondition k2, f (*G)(f), f (*usolexata)(f), f (*psolexata)(f) ,  f del1, f del2)
 {
     //Inicialize weight vector
     vector<f> w = gauss_weights(nint);
@@ -520,7 +451,6 @@ void galerking_LS(int nel, int nint, int nen, f h, f epslon, f gamma, contourCon
         }
     }
     
-    printmatrix(Ae);
     VectorXd u = Ae.partialPivLu().solve(Fe);
 
    
@@ -763,7 +693,7 @@ void discontinuous_lagrange_exact(int nel, int nint, int nen, f h, f epslon, f a
     cout<<endl;
 }
 
-void hibrid_fem(int nel, int nint, int nen, f h, f epslon, f alpha, f beta0, contourCondition k1, contourCondition k2, f (*G)(f), f (*solexata)(f))
+void hibrid_fem(int nel, int nint, int nen, f h, f alpha, f beta0, contourCondition k1, contourCondition k2, f (*G)(f), f (*solexata)(f))
 {
     //Inicialize weight vector
     vector<f> w = gauss_weights(nint);
@@ -918,7 +848,7 @@ void hibrid_fem(int nel, int nint, int nen, f h, f epslon, f alpha, f beta0, con
             }
         }
 
-        VectorXd ue = VectorXd::Zero(nint);
+        VectorXd ue = VectorXd::Zero(nint); 
         ue = K.inverse() * F;
         for(int i = 0; i<nen; i++)
         {
@@ -993,6 +923,185 @@ void hibrid_fem(int nel, int nint, int nen, f h, f epslon, f alpha, f beta0, con
     file.close();
 }
 
+void hybrid_mixed_fem_u(int nel, int nint, int nen, f h, f beta, contourCondition k1, contourCondition k2, f (*G)(f), f (*usolexata)(f), f (*psolexata)(f), VectorXd lmbda)
+{
+    vector<f> w = gauss_weights(nint);
+    f*** shg = create_shg(nen, nint);
+
+    VectorXd u = VectorXd::Zero(nel*nint);
+    VectorXd p = VectorXd::Zero(nel*nint);
+
+    vector<f> x(nel+1, 0); 
+    for(int i = 0; i <nel+1;i++)
+    {
+        x[i] = i*h;
+    }
+
+
+    int index = 0; 
+    for(int n = 0; n<nel; n++)
+    {
+        MatrixXd A = MatrixXd::Zero(2*nint, 2*nint);
+        VectorXd F = VectorXd::Zero(2*nint);
+
+        for(int l=0; l<nint; l++)
+        {
+            f xx = 0;
+            for(int i=0; i<nen; i++)
+            {
+                xx = xx + shg[0][i][l]*(x[n] + i*h/(nen-1));
+            }
+
+            for(int j = 0; j<nen; j++)
+            {
+                F(nint+j) += -(G(xx) * shg[0][j][l]*w[l]*h/2.0); 
+
+                for(int i = 0; i<nen; i++)
+                {
+                    A(i, j) += (shg[0][i][l]*shg[0][j][l]*w[l]*h/2.0); 
+                    A(nint+i, j) += -(shg[0][i][l]*shg[1][j][l]*w[l]); //Aqui nn vai ter o h/2.0 pq simplifiquei com 2.0/h da derivada.
+                    A(i, nint+j) += -(shg[1][i][l]*shg[0][j][l]*w[l]); 
+                }
+            }
+        }   
+
+        for(int j = 0; j<nen; j++)
+        {
+            F(j) += - (shge(0, j, 1.0, nint) *lmbda(n+1) - shge(0, j, -1.0, nint) * lmbda(n));
+            F(nint+j) += beta*(shge(0, j, 1.0, nint)*lmbda(n+1) - shge(0, j, -1.0, nint)*(lmbda(n)));
+
+            for(int i =0; i<nen; i++)
+            {
+                A(nint+i, nint+j) += beta*(shge(0, i, 1.0, nint) * shge(0, j, 1.0, nint) - shge(0, i, -1.0, nint) * shge(0, j, -1.0, nint));
+            }
+        }
+
+        VectorXd ue = A.partialPivLu().solve(F);
+        for(int i = 0; i<nen; i++)
+        {
+            u(index) =  ue(i);
+            p(index) =  ue(nint + i);
+            index++;
+        }
+
+    }
+    cout<<"Solução U"<<endl;
+    cout<<u<<endl;
+    cout<<"Solução P"<<endl;
+    cout<<p<<endl; 
+
+}
+
+void hybrid_mixed_fem_x(int nel, int nint, int nen, f h, f beta,  contourCondition k1, contourCondition k2, f (*G)(f), f (*usolexata)(f), f (*psolexata)(f))
+{
+    //Inicialize weight vector
+    vector<f> w = gauss_weights(nint);
+    //Inicializando shg
+    f*** shg = create_shg(nen, nint);
+    
+    VectorXd u = VectorXd::Zero(nel*nint);
+    VectorXd F_geral = VectorXd::Zero(nel+1);
+    MatrixXd K_geral = MatrixXd::Zero(nel+1,nel+1);
+
+    vector<f> x(nel+1, 0); 
+    for(int i = 0; i <nel+1;i++)
+    {
+        x[i] = i*h;
+    }
+
+
+    int index = 0;
+    for(int n = 0; n < nel; n++)
+    {
+        VectorXd F = VectorXd::Zero(2*nint);
+        MatrixXd A = MatrixXd::Zero(2*nint, 2*nint);
+        MatrixXd B = MatrixXd::Zero(2*nint, 2);
+
+        for(int l=0; l<nint; l++)
+        {
+            f xx = 0;
+            for(int i=0; i<nen; i++)
+            {
+                xx = xx + shg[0][i][l]*(x[n] + i*h/(nen-1));
+            }
+
+            for(int j = 0; j<nen; j++)
+            {
+                F(nint+j) += -(G(xx) * shg[0][j][l]*w[l]*h/2.0); 
+
+                for(int i = 0; i<nen; i++)
+                {
+                    A(i, j) += (shg[0][i][l]*shg[0][j][l]*w[l]*h/2.0); 
+                    A(nint+i, j) += -(shg[0][i][l]*shg[1][j][l]*w[l]); //Aqui nn vai ter o h/2.0 pq simplifiquei com 2.0/h da derivada.
+                    A(i, nint+j) += -(shg[1][i][l]*shg[0][j][l]*w[l]); 
+                }
+            }
+        }   
+
+        for(int j = 0; j<nen; j++)
+        {
+            B(j, 0) += -shge(0, j, -1.0, nint) ;
+            B(nint+j, 0) += beta*shge(0, j, -1.0, nint);
+            B(j, 1) += shge(0, j, 1.0, nint);
+            B(nint+j, 0) += - beta*shge(0, j, 1.0, nint);
+
+            for(int i =0; i<nen; i++)
+            {
+                A(nint+i, nint+j) += beta*(shge(0, i, 1.0, nint) * shge(0, j, 1.0, nint) - shge(0, i, -1.0, nint) * shge(0, j, -1.0, nint));
+            }
+        }
+
+        Matrix2d C; 
+        C << -beta, 0, 0, beta; //!Acho que isso tá errando, tá faltando o mu
+
+
+        Matrix2d K;
+        K = B.transpose()*A.inverse()*B - C;
+
+        K_geral(n, n)+= K(0,0);
+        K_geral(n+1, n)+= K(1,0);
+        K_geral(n+1, n+1)+= K(1,1);
+        K_geral(n, n+1)+= K(0,1);
+
+        MatrixXd Fk = MatrixXd::Zero(2, 1);
+        Fk = (B.transpose()*A.inverse())*F; 
+        F_geral(n) += Fk(0);
+        F_geral(n+1) += Fk(1); 
+    }
+    
+    
+    //Condição de contorno
+    if(k1.type == DIRICHLET)
+    {
+        F_geral(0) = k1.value; // Condição de contorno de Dirichilet aqui
+        for(int i = 1; i<nint; i++)
+        {   
+            F_geral(i) -= K_geral(i,0) * k1.value; 
+            K_geral(0, i) = 0;
+            K_geral(i, 0) = 0;
+        }
+        K_geral(0,0) = 1;
+    }
+    if(k2.type == DIRICHLET)
+    {
+        F_geral(nel) = k2.value; 
+
+        //Os valores do lado eu não preciso fazer nada, mas com os valores abaixo é necessário fazer loucuras
+        for(int i = 1; i<nint; i++) // Tirei o zero, pra ele nn fazer loucuras demais 
+        {
+            F_geral((nel)-i) -= K_geral((nel), (nel)-i)*k2.value;
+            K_geral((nel)-i, (nel)) = 0;
+            K_geral((nel), (nel)-i) = 0;
+        }
+        K_geral((nel),(nel)) = 1;
+    }
+    VectorXd lmbda = K_geral.partialPivLu().solve(F_geral);
+    cout<<"x"<<endl; 
+    cout<<lmbda<<endl; 
+
+    hybrid_mixed_fem_u(nel, nint,  nen, h, beta, k1, k2, G, usolexata, psolexata, lmbda);
+}
+
 void questao1()
 {   
     cout<<"Questão 1 da primeira lista de ANMEF"<<endl;
@@ -1039,7 +1148,7 @@ void lista2()
 
         int nint = 2;
         int nen = nint;
-        galerking_LS(nel, nint, nen, h, 0, 0, create_contourCondition(0, DIRICHLET), create_contourCondition(0, DIRICHLET), pi2sinPiX, mpicospix , sinpix, -1.0/2.0, -1.0/2.0);
+        mixed_fem(nel, nint, nen, h, 0, 0, create_contourCondition(0, DIRICHLET), create_contourCondition(0, DIRICHLET), pi2sinPiX, mpicospix , sinpix, -1.0/2.0, -1.0/2.0);
     }
 }
 
@@ -1066,7 +1175,7 @@ void lista3questaoC()
 
     int nint = 2;
     int nen = nint;
-    f alpha = 0;
+    f alpha = 1;
     f beta = 0;
     discontinuous_lagrange_exact(nel, nint, nen, h, 1, alpha, beta, create_contourCondition(1, DIRICHLET), create_contourCondition(-1, DIRICHLET), pi2cospix, cospix);
 }
@@ -1083,7 +1192,7 @@ void lista3questaoF(){
         int nen = nint;
         f alpha = 1;
         f beta = 10;
-        hibrid_fem(nel, nint, nen, h, 1, alpha, beta, create_contourCondition(0, DIRICHLET), create_contourCondition(0, DIRICHLET), pi2sinPiX, sinpix);
+        hibrid_fem(nel, nint, nen, h, alpha, beta, create_contourCondition(0, DIRICHLET), create_contourCondition(0, DIRICHLET), pi2sinPiX, sinpix);
     }
 }
 
@@ -1105,8 +1214,35 @@ void lista3questaoFGC()
 
         galerkin_continum(nel, nint, nen, h, 1, 0, create_contourCondition(0,DIRICHLET), create_contourCondition(0, DIRICHLET), pi2sinPiX, sinpix);
     }
-    
+}
 
+void lista4questaoC()
+{
+    f a = 0, b = 1;
+    int nel = 64;
+
+    //cout<<endl<<nel<<" elementos"<<endl;
+    f h = (b-a)/nel;
+
+    int nint = 2;
+    int nen = nint;
+    f beta = 100.0;
+    
+    vector<f> x(nel+1, 0); 
+    for(int i = 0; i <nel+1;i++)
+    {
+        x[i] = i*h;
+    }
+
+
+    VectorXd lmbda = VectorXd::Zero(nel+1);
+
+    for(int i = 0; i<=nel; i++)
+    {
+        lmbda(i) = cospix(x[i]);
+    }
+
+    hybrid_mixed_fem_x(nel, nint, nen, h, beta, create_contourCondition(1,DIRICHLET), create_contourCondition(-1, DIRICHLET), pi2cospix, pisinpix, cospix);
 }
 
 int main(){
@@ -1121,8 +1257,11 @@ int main(){
     //Lista 3:
     //lista3questaoA(); 
     //lista3questaoC(); 
-    lista3questaoF();
+    //lista3questaoF();
     //lista3questaoFGC();
 
+    //Lista 4:
+    lista4questaoC();
+    
     return 0;
 }
