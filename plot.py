@@ -50,3 +50,14 @@ plt.plot(vetor1, vetor4, '-o', label="p", linestyle='--')
 plt.grid()
 plt.legend()
 plt.show()
+
+
+def solexata(vetor1):
+    vetor1 = np.pi*vetor1
+    return np.cos(vetor1)
+
+plt.plot(np.linspace(0, 1, 13), [  1,   0.965926,   0.866025,   0.707107,        0.5,   0.258819,-3.8382e-15,  -0.258819,       -0.5,  -0.707107,  -0.866025,  -0.965926,         -1], '-o')
+plt.plot(np.linspace(0, 1, 13), solexata(np.linspace(0, 1, 13)))
+plt.show()
+
+

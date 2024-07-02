@@ -937,7 +937,8 @@ void hybrid_mixed_fem_u(int nel, int nint, int nen, f h, f beta, f d1, f (*G)(f)
         x[i] = i*h;
     }
 
-
+    f erul2u = 0.0;
+    f erul2p = 0.0; 
     int index = 0; 
     for(int n = 0; n<nel; n++)
     {
@@ -958,9 +959,10 @@ void hybrid_mixed_fem_u(int nel, int nint, int nen, f h, f beta, f d1, f (*G)(f)
 
                 for(int i = 0; i<nen; i++)
                 {
-                    A(i, j) += (shg[0][i][l]*shg[0][j][l]*w[l]*h/2.0); 
-                    A(nint+i, j) += -(shg[0][i][l]*shg[1][j][l]*w[l]); 
-                    A(i, nint+j) += -(shg[1][i][l]*shg[0][j][l]*w[l]) + d1*(shg[0][i][l] + shg[1][i]); 
+                    A(i, j) += (shg[0][i][l]*shg[0][j][l]*w[l]*h/2.0) + d1*(shg[0][i][l]*shg[0][j][l]*w[l]*h/2.0); 
+                    A(nint+i, j) += -(shg[0][i][l]*shg[1][j][l]*w[l]) + d1*(shg[1][i][l]*shg[0][j][l]*w[l]); 
+                    A(i, nint+j) += -(shg[1][i][l]*shg[0][j][l]*w[l]) + d1*(shg[0][i][l]*shg[1][j][l]*w[l]); 
+                    A(nint+i, nint+j) += d1*(shg[1][i][l]*shg[1][j][l]*(2.0/h)*w[l]);
                 }
             }
         }   
@@ -984,7 +986,35 @@ void hybrid_mixed_fem_u(int nel, int nint, int nen, f h, f beta, f d1, f (*G)(f)
             index++;
         }
 
+        //!Calculo do erro
+        f erroku= 0;
+        f errokp=0;
+        for(int l =0; l<nint;l++)
+        {
+            f uh = 0.0;
+            f ph = 0.0;
+            f xxu = 0.0;
+            f xxp = 0.0;
+
+            for(int i =0; i<nen;i++)
+            {
+                ph += shg[0][i][l]*ue(nint+i); 
+                uh += shg[0][i][l]*ue(i);
+                xxu += shg[0][i][l]*(x[n] + i*h/(nen-1));
+
+            }
+            erroku += (pow(usolexata(xxu) - uh, 2.0) * w[l]*(h/2.0));
+            errokp += (pow(psolexata(xxu) - ph, 2.0) * w[l]*(h/2.0));
+        }
+        erul2u += erroku;
+        erul2p += errokp; 
+
     }
+
+    cout<<"Erro u:"<<endl;
+    cout<<sqrt(erul2u)<<endl; 
+     cout<<"Erro p:"<<endl;
+    cout<<sqrt(erul2p)<<endl<<endl; 
 
     ofstream file("output.txt");
     if(!file)
@@ -1045,7 +1075,7 @@ void hybrid_mixed_fem_u(int nel, int nint, int nen, f h, f beta, f d1, f (*G)(f)
 
 }
 
-void hybrid_mixed_fem_x(int nel, int nint, int nen, f h, f beta,  contourCondition k1, contourCondition k2, f (*G)(f), f (*usolexata)(f), f (*psolexata)(f))
+void hybrid_mixed_fem_x(int nel, int nint, int nen, f h, f beta, f d1, contourCondition k1, contourCondition k2, f (*G)(f), f (*usolexata)(f), f (*psolexata)(f))
 {
     //Inicialize weight vector
     vector<f> w = gauss_weights(nint);
@@ -1084,9 +1114,10 @@ void hybrid_mixed_fem_x(int nel, int nint, int nen, f h, f beta,  contourConditi
 
                 for(int i = 0; i<nen; i++)
                 {
-                    A(i, j) += (shg[0][i][l]*shg[0][j][l]*w[l]*h/2.0); 
-                    A(nint+i, j) += -(shg[0][i][l]*shg[1][j][l]*w[l]); //Aqui nn vai ter o h/2.0 pq simplifiquei com 2.0/h da derivada.
-                    A(i, nint+j) += -(shg[1][i][l]*shg[0][j][l]*w[l]); 
+                    A(i, j) += (shg[0][i][l]*shg[0][j][l]*w[l]*h/2.0) + d1*(shg[0][i][l]*shg[0][j][l]*w[l]*h/2.0); 
+                    A(nint+i, j) += -(shg[0][i][l]*shg[1][j][l]*w[l]) + d1*(shg[1][i][l]*shg[0][j][l]*w[l]); 
+                    A(i, nint+j) += -(shg[1][i][l]*shg[0][j][l]*w[l]) + d1*(shg[0][i][l]*shg[1][j][l]*w[l]); 
+                    A(nint+i, nint+j) += d1*(shg[1][i][l]*shg[1][j][l]*(2.0/h)*w[l]);
                 }
             }
         }   
@@ -1096,7 +1127,7 @@ void hybrid_mixed_fem_x(int nel, int nint, int nen, f h, f beta,  contourConditi
             B(j, 0) += -shge(0, j, -1.0, nint) ;
             B(nint+j, 0) += beta*shge(0, j, -1.0, nint);
             B(j, 1) += shge(0, j, 1.0, nint);
-            B(nint+j, 0) += - beta*shge(0, j, 1.0, nint);
+            B(nint+j, 1) += - beta*shge(0, j, 1.0, nint);
 
             for(int i =0; i<nen; i++)
             {
@@ -1105,7 +1136,7 @@ void hybrid_mixed_fem_x(int nel, int nint, int nen, f h, f beta,  contourConditi
         }
 
         Matrix2d C; 
-        C << -beta, 0, 0, beta; //!Acho que isso tá errando, tá faltando o mu
+        C << -beta, 0, 0, beta; 
 
 
         Matrix2d K;
@@ -1149,10 +1180,9 @@ void hybrid_mixed_fem_x(int nel, int nint, int nen, f h, f beta,  contourConditi
         K_geral((nel),(nel)) = 1;
     }
     VectorXd lmbda = K_geral.partialPivLu().solve(F_geral);
-    cout<<"x"<<endl; 
-    cout<<lmbda<<endl; 
-
-    hybrid_mixed_fem_u(nel, nint,  nen, h, beta, k1, k2, G, usolexata, psolexata, lmbda);
+    
+    //cout<<lmbda<<endl;
+    hybrid_mixed_fem_u(nel, nint, nen, h, beta, d1, G, usolexata, psolexata, lmbda);
 }
 
 void questao1()
@@ -1271,15 +1301,16 @@ void lista3questaoFGC()
 
 void lista4questaoC()
 {
+   
     f a = 0, b = 1;
-    int nel = 128;
+    int nel = 64;
 
     //cout<<endl<<nel<<" elementos"<<endl;
     f h = (b-a)/nel;
 
-    int nint =  3;
+    int nint =  2;
     int nen = nint;
-    f beta = 1000.0;
+    f beta = 10.0;
     
     vector<f> x(nel+1, 0); 
     for(int i = 0; i <nel+1;i++)
@@ -1288,27 +1319,28 @@ void lista4questaoC()
     }
 
 
-    VectorXd lmbda = VectorXd::Zero(nel+1);
+        VectorXd lmbda = VectorXd::Zero(nel+1);
 
-    for(int i = 0; i<=nel; i++)
-    {
-        lmbda(i) = cospix(x[i]);
-    }
+        for(int i = 0; i<=nel; i++)
+        {
+            lmbda(i) = cospix(x[i]);
+        }
 
-    hybrid_mixed_fem_u(nel, nint, nen, h, beta, 0, pi2cospix, pisinpix, cospix, lmbda);
+        hybrid_mixed_fem_u(nel, nint, nen, h, beta, 0, pi2cospix, pisinpix, cospix, lmbda);
+    
 }
 
 void lista4questaoD()
 {
     f a = 0, b = 1;
-    int nel = 128;
+    int nel = 64;
 
     //cout<<endl<<nel<<" elementos"<<endl;
     f h = (b-a)/nel;
 
-    int nint =  3;
+    int nint =  2;
     int nen = nint;
-    f beta = 1000.0;
+    f beta = 0;
     
     vector<f> x(nel+1, 0); 
     for(int i = 0; i <nel+1;i++)
@@ -1324,7 +1356,26 @@ void lista4questaoD()
         lmbda(i) = cospix(x[i]);
     }
 
-    hybrid_mixed_fem_u(nel, nint, nen, h, beta, -1.0/2.0, pi2cospix, pisinpix, cospix, lmbda);
+    hybrid_mixed_fem_u(nel, nint, nen, h, 0.0, -1.0/2.0, pi2cospix, pisinpix, cospix, lmbda);
+}
+
+void lista4questaoF()
+{
+    for(int i =3; i<=10; i++)
+    {
+        f a = 0, b = 1;
+        int nel = pow(2, i);
+
+        cout<<endl<<nel<<" elementos"<<endl;
+        f h = (b-a)/nel;
+
+        int nint =  5;
+        int nen = nint;
+        f beta0 = 10;
+        f beta = beta0*(pow(nint-1, 2))/h;
+        f d1 = 0.0;
+        hybrid_mixed_fem_x(nel, nint, nen, h, beta0, d1, create_contourCondition(1, DIRICHLET), create_contourCondition(-1, DIRICHLET), pi2cospix, pisinpix, cospix);
+    }
 }
 
 int main(){
@@ -1335,7 +1386,7 @@ int main(){
     
     //Lista 2:
     //lista2(); 
-
+    
     //Lista 3:
     //lista3questaoA(); 
     //lista3questaoC(); 
@@ -1343,7 +1394,8 @@ int main(){
     //lista3questaoFGC();
 
     //Lista 4:
-    lista4questaoC();
-    
+    //lista4questaoC();
+    //lista4questaoD();
+    lista4questaoF(); 
     return 0;
 }
