@@ -1187,6 +1187,217 @@ void hybrid_mixed_fem_x(int nel, int nint, int nen, f h, f beta, f d1, f d2,cont
     hybrid_mixed_fem_u(nel, nint, nen, h, beta, d1,d2, G, usolexata, psolexata, lmbda);
 }
 
+void DG(int nel, int nint, int nen, f h, f alpha, f d0, f d1, contourCondition k1, contourCondition k2, f (*G)(f), f (*solexata)(f))
+{
+    //Inicialize weight vector
+    vector<f> w = gauss_weights(nint);
+
+    //Inicializando shg
+    f*** shg = create_shg(nen, nint);
+
+    vector<f> x(nel+1, 0); 
+    for(int i = 0; i <nel+1;i++)
+    {
+        x[i] = i*h;
+    }
+
+    int index = 0;
+    MatrixXd K_geral = MatrixXd::Zero(nel*nen,nel*nen);
+    VectorXd F_geral = VectorXd::Zero(nel*nen);
+    //Calculo do multiplicador de LaGrange
+    for(int n=0; n<nel; n++)
+    {
+        MatrixXd A = MatrixXd::Zero(nint, nint);
+        MatrixXd E = MatrixXd::Zero(nint, nint);
+        MatrixXd D = MatrixXd::Zero(nint, nint);
+        VectorXd F = VectorXd::Zero(nint);
+        for(int l=0; l<nint; l++)
+        {
+            f xx = 0;
+            for(int i =0; i<nen; i++)
+            {
+                xx += shg[0][i][l]*(x[n] + i*h/(nen-1));
+            } 
+            for(int j =0; j<nen;j++)
+            {
+                //aqui eu tenho que verificar dnv, se o primeiro item é a linha ou a coluna
+                F(j) += G(xx) *shg[0][j][l]*w[l]*(h/2.0);                    
+                
+                for(int i =0;i<nen;i++)
+                {
+                    //Talvez com k = 1 não dê problema nessa parte, mas quando for k.2, acho que essa segunda soma, só tem que ser nos "contornos" dos elementos;
+                    A(i,j) = A(i,j) + (shg[1][i][l] * shg[1][j][l] * (2.0/h) * w[l]);
+                }
+            }       
+        }    
+        
+        for(int j = 0; j<nen; j++)
+        {
+            for(int i = 0; i<nen; i++)
+            {
+                if(n==0)
+                {
+                    A(i,j) += shge(1, j, -1.0, nint)*(2.0/h)*shge(0,i,-1.0, nint)
+                        - alpha *shge(0, j, -1.0, nint)*shge(1, i, -1.0, nint)*(2.0/h)
+                        + d0*shge(0, j, -1.0, nint)*shge(0,i,-1.0, nint);
+                    A(i,j) += -0.5*shge(1, j, 1.0, nint)*(2.0/h)*shge(0,i,1.0,nint)
+                        +0.5*alpha*shge(0, j, 1.0, nint)*shge(1, i, 1.0, nint)*(2.0/h)
+                        +d0*shge(0, j, 1.0, nint)*shge(0,i,1.0, nint);
+                    D(i,j) += -0.5*shge(1,j,-1.0, nint)*(2.0/h)*shge(0, i, 1.0, nint)
+                        - 0.5*alpha*shge(0, j, -1.0, nint)*(2.0/h)*shge(1, i, 1.0, nint)
+                        - d0*shge(0, j, -1.0, nint)*shge(0, i, 1.0, nint);
+                }
+                else if(n==nel-1)
+                {
+                    A(i, j) += -shge(1, j, 1.0, nint)*(2.0/h)*shge(0, i, 1.0, nint)
+                        + alpha*shge(0, j, 1.0, nint)*(2.0/h)*shge(1, i, 1.0, nint)
+                        + d0*shge(0, j, 1.0, nint)*shge(0, i, 1.0, nint);
+                    A(i,j) += 0.5*shge(1, j, -1.0, nint)*(2.0/h)*shge(0, i, -1.0, nint)
+                        -0.5*alpha*shge(0, j, -1.0, nint)*shge(1, i, -1.0, nint)*(2.0/h)
+                        + d0*shge(0, j, -1.0, nint)*shge(0, i, -1.0, nint);
+                    E(i, j) += 0.5*shge(1, j, 1.0, nint)*(2.0/h)*shge(0, i, -1.0, nint)
+                        + 0.5*alpha*shge(0, j, 1.0, nint)*shge(1, i, -1.0, nint)*(2.0/h)
+                        - d0*shge(0, j, 1.0, nint)*shge(0, i, -1.0, nint);
+                }
+                else
+                {
+                    A(i, j) += -0.5*shge(1, j, 1.0, nint)*(2.0/h)*shge(0, i, 1.0, nint)
+                        + 0.5*alpha*shge(0, j, 1.0, nint)*shge(1, i, 1.0, nint)*(2.0/h)
+                        + d0*shge(0,j,1.0, nint)*shge(0, i, 1.0, nint);
+
+                    A(i,j) += 0.5*shge(1, j, -1.0, nint)*(2.0/h)*shge(0, i, -1.0, nint)
+                        -0.5*alpha*shge(0,j,-1.0, nint)*shge(1, i, -1.0, nint)*(2.0/h)
+                        + d0*shge(0,j,-1.0, nint)*shge(0, i, -1.0, nint);
+
+
+                    D(i,j) += -0.5*shge(1, j, -1.0, nint)*(2.0/h)*shge(0, i, 1.0, nint)
+                        - 0.5*alpha*shge(0, j, -1.0, nint)*shge(1, i, 1.0, nint)*(2.0/h)
+                        - d0*shge(0, j, -1.0, nint)*shge(0, i, 1.0, nint);
+                   
+                    E(i, j) += 0.5*shge(1, j, 1.0, nint)*(2.0/h)*shge(0,i,-1.0, nint)
+                        +0.5*alpha*shge(0, j, 1.0, nint)*shge(1, i, -1.0, nint)*(2.0/h)
+                        - d0*shge(0,j, 1.0, nint)*shge(0,i,-1.0,nint);
+                }
+            }
+            
+        }
+        for(int j=0; j<nen; j++)
+        {   
+
+            F_geral(nen*n+j) = F(j);
+            for(int i = 0; i<nen;i++)
+            {
+                K_geral(n*nen+i, n*nen+j) = A(i,j);     
+                if(n!= 0)
+                    K_geral((n*nen)+i,((n-1)*nen)+j) = E(i,j);
+                if(n!=nel-1)    
+                    K_geral((n*nen)+i , ((n+1)*nen)+j) = D(i,j);
+            }
+        }
+    
+    }
+    
+    //Condição de contorno
+    if(k1.type == DIRICHLET)
+    {
+        F_geral(0) = k1.value; // Condição de contorno de Dirichilet aqui
+        for(int i = 1; i<=nint*2; i++)
+        {   
+            F_geral(i) -= K_geral(0,i) * k1.value; 
+            K_geral(0, i) = 0;
+            K_geral(i, 0) = 0;
+        }
+        K_geral(0,0) = 1;
+    }
+    if(k2.type == DIRICHLET)
+    {
+        F_geral(nel*nen-1) = k2.value; 
+
+        for(int i = 1; i<=nint*2; i++)
+        {
+            F_geral((nen*nel-1)-i) -= K_geral((nen*nel-1), (nen*nel-1)-i)*k2.value;
+            K_geral((nen*nel-1)-i, (nen*nel-1)) = 0;
+            K_geral((nen*nel-1), (nen*nel-1)-i) = 0;
+        }
+        K_geral((nel*nen-1),(nel*nen-1)) = 1;
+    } 
+
+    
+    VectorXd u = K_geral.partialPivLu().solve(F_geral);
+
+    //Cálculo do erro L2
+    index = 0;
+    f errok = 0;
+    for(int n = 0; n<nel;n++)
+    {
+        for(int l =0; l<nint;l++)
+        {
+            f uh = 0.0;
+            f xx = 0.0;
+
+            for(int i =0; i<nen;i++)
+            {
+                uh += shg[0][i][l]*u(i + index);
+                xx += shg[0][i][l]*(x[n] + i*h/(nen-1));
+            }
+            errok += (pow(solexata(xx) - uh, 2.0) * w[l]*(h/2.0));
+        }
+        index+= nint;
+    }
+    cout<<sqrt(errok)<<endl; 
+
+
+
+    ofstream file("output.txt");
+    if(!file)
+    {
+        cerr<<"Erro ao abrir arquivo de saída"<<endl;
+        return;
+    }
+    /* file<< K_geral<<endl;
+    file.close();
+    return; */
+    vector<f> xs;
+    file<<u.size()<<endl;
+
+    int j = nen;
+    for(int i =0; i<u.size() - nel+1;i++)
+    {   
+        if(j == 0)
+        {
+            j = nen;
+            i--;
+        }
+        xs.push_back(i*h/(nen-1));
+        file<<i*h/(nen-1);
+        if(i!=u.size() - nel)
+            file<<",";
+        j--;
+
+    }
+    file<<endl;
+
+    //Escrevendo solução exata no arquivo:
+    for(int i = 0; i<xs.size(); i++)
+    {
+        file<<solexata(xs[i]);
+        if(i!=xs.size()-1)
+            file<<",";
+    }
+    file<<endl;
+
+    //Escrevendo solução no arquivo:
+    for(int i = 0; i<u.size(); i++)
+    {
+        file<<u(i);
+        if(i!=u.size()-1)
+            file<<",";
+    }
+    file<<endl;
+
+    file.close();
+}
+
 void questao1()
 {   
     cout<<"Questão 1 da primeira lista de ANMEF"<<endl;
@@ -1419,6 +1630,110 @@ void lista4questaoH()
     }
 }
 
+void SIPG()
+{
+    for(int i =9; i<=9;i++)
+    {    
+        f a = 0, b = 1;
+        int nel = pow(2, i);
+
+        cout<<endl<<nel<<" elementos"<<endl;
+        f h = (b-a)/nel;
+
+        int nint =  5;
+        int nen = nint;
+        f beta0 = 10;
+        f d1 = beta0*(pow(nint-1, 2))/h;
+        f d2 = d1;
+        f alpha = -1.0;
+        DG(nel, nint, nen, h, alpha, d1, d2, create_contourCondition(0, DIRICHLET), create_contourCondition(0, DIRICHLET),pi2sinPiX, sinpix); 
+    }
+}
+
+void zerozeroDG()
+{
+    for(int i =3; i<=10;i++)
+    {    
+        f a = 0, b = 1;
+        int nel = pow(2, i);
+
+        // cout<<endl<<nel<<" elementos"<<endl;
+        f h = (b-a)/nel;
+
+        int nint =  5;
+        int nen = nint;
+        f d1 = 0;
+        f d2 = 0;
+        f alpha = -1.0;
+        DG(nel, nint, nen, h, alpha, d1, d2, create_contourCondition(0, DIRICHLET), create_contourCondition(0, DIRICHLET),pi2sinPiX, sinpix); 
+    }
+}
+
+
+void NIPG()
+{
+    for(int i =3; i<=10;i++)
+    {    
+        f a = 0, b = 1;
+        int nel = pow(2, i);
+
+        // cout<<endl<<nel<<" elementos"<<endl;
+        f h = (b-a)/nel;
+
+        int nint =  5;
+        int nen = nint;
+        f d1 = 1;
+        f d2 = 0;
+        f alpha = 1.0;
+        DG(nel, nint, nen, h, alpha, d1, d2, create_contourCondition(0, DIRICHLET), create_contourCondition(0, DIRICHLET),pi2sinPiX, sinpix); 
+    }
+}
+
+void NIPG0(){
+    for(int j = 3; j<=5 ; j++)
+    {
+        cout<<"polinomio de "<<j<<endl;
+        for(int i =3; i<=10;i++)
+        {    
+            f a = 0, b = 1;
+            int nel = pow(2, i);
+
+            // cout<<endl<<nel<<" elementos"<<endl;
+            f h = (b-a)/nel;
+
+            int nint =  j;
+            int nen = nint;
+            f d1 = 0;
+            f d2 = 0;
+            f alpha = 1.0;
+            DG(nel, nint, nen, h, alpha, d1, d2, create_contourCondition(0, DIRICHLET), create_contourCondition(0, DIRICHLET),pi2sinPiX, sinpix); 
+        }
+    }
+}
+
+void IIPG(){
+    for(int j = 3; j<=5 ; j++)
+    {
+        cout<<"polinomio de "<<j<<endl;
+        for(int i =3; i<=10;i++)
+        {    
+            f a = 0, b = 1;
+            int nel = pow(2, i);
+
+            // cout<<endl<<nel<<" elementos"<<endl;
+            f h = (b-a)/nel;
+
+            int nint =  j;
+            int nen = nint;
+            f beta0 = 10;
+            f d1 = beta0*(pow(nint-1, 2))/h;
+            f d2 = 0;
+            f alpha = 0.0;
+            DG(nel, nint, nen, h, alpha, d1, d2, create_contourCondition(0, DIRICHLET), create_contourCondition(0, DIRICHLET),pi2sinPiX, sinpix); 
+        }
+    }
+}
+
 int main(){
     //Lista 1:
     //teste1();
@@ -1433,12 +1748,16 @@ int main(){
     //lista3questaoC(); 
     //lista3questaoF();
     //lista3questaoFGC();
+    SIPG();
+    //zerozeroDG();
+    //NIPG();
+    //NIPG0();
 
     //Lista 4:
     //lista4questaoC();
     //lista4questaoD();
     //lista4questaoF(); 
     //lista4questaoG();
-    lista4questaoH();
+    //lista4questaoH();
     return 0;
 }
